@@ -4,36 +4,41 @@ const IRS_MILEAGE_RATE_2025 = 0.70;
 
 const mileageRoutes: FastifyPluginAsync = async (fastify) => {
   // List mileage entries
-  fastify.get('/mileage', async (request) => {
-    const query = request.query as Record<string, string>;
-    const page = parseInt(query.page) || 1;
-    const limit = parseInt(query.limit) || 50;
-    const year = query.year ? parseInt(query.year) : undefined;
+  fastify.get('/mileage', async (request, reply) => {
+    try {
+      const query = request.query as Record<string, string>;
+      const page = parseInt(query.page) || 1;
+      const limit = parseInt(query.limit) || 50;
+      const year = query.year ? parseInt(query.year) : undefined;
 
-    const where: any = { userId: request.userId };
+      const where: any = { userId: request.userId };
 
-    if (year) {
-      where.date = {
-        gte: new Date(year, 0, 1),
-        lte: new Date(year, 11, 31, 23, 59, 59),
+      if (year) {
+        where.date = {
+          gte: new Date(year, 0, 1),
+          lte: new Date(year, 11, 31, 23, 59, 59),
+        };
+      }
+
+      const [data, total] = await Promise.all([
+        fastify.prisma.mileageEntry.findMany({
+          where,
+          include: { project: { select: { id: true, name: true, color: true } } },
+          orderBy: { date: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        fastify.prisma.mileageEntry.count({ where }),
+      ]);
+
+      return {
+        data,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
+    } catch (err) {
+      fastify.log.error(err, 'mileage list failed');
+      return reply.status(500).send({ error: 'Failed to load mileage entries' });
     }
-
-    const [data, total] = await Promise.all([
-      fastify.prisma.mileageEntry.findMany({
-        where,
-        include: { project: { select: { id: true, name: true, color: true } } },
-        orderBy: { date: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      fastify.prisma.mileageEntry.count({ where }),
-    ]);
-
-    return {
-      data,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    };
   });
 
   // Get single mileage entry

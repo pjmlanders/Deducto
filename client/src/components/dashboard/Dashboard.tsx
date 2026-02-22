@@ -173,9 +173,9 @@ export function Dashboard() {
             <div className="text-3xl font-bold tracking-tight text-red-600 mt-1">
               {isLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(monthly?.expenses?.total || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {isLoading ? <Skeleton className="h-3 w-20" /> : `${monthly?.expenses?.count || 0} transactions`}
-            </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -190,9 +190,9 @@ export function Dashboard() {
             <div className="text-3xl font-bold tracking-tight text-green-600 mt-1">
               {isLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(monthly?.deposits?.total || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {isLoading ? <Skeleton className="h-3 w-16" /> : `${monthly?.deposits?.count || 0} deposits`}
-            </p>
+            </div>
           </CardContent>
         </Card>
 
