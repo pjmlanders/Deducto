@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users (synced from Clerk) ───────────────────────────────────
+
+model User {
+  id        String   @id // Clerk user ID
+  email     String   @unique
+  name      String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects       Project[]
+  expenses       Expense[]
+  deposits       Deposit[]
+  receipts       Receipt[]
+  mileageEntries MileageEntry[]
+  tags           Tag[]
+  categories     Category[]
+  budgets        Budget[]
+  recurringRules RecurringRule[]
+  settings       UserSettings?
+}
+
+model UserSettings {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultCurrency String  @default("USD")
+  fiscalYearStart Int     @default(1) // Month number (1=Jan)
+  mileageRate     Decimal @default(0.70) // IRS standard mileage rate 2025
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Projects ────────────────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  isActive    Boolean  @default(true)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses Expense[]
+  deposits Deposit[]
+  budgets  Budget[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+// ─── Expenses ────────────────────────────────────────────────────
+
+model Expense {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Core fields
+  vendor      String
+  description String
+  amount      Decimal
+  currency    String   @default("USD")
+  date        DateTime
+
+  // Categorization
+  categoryId    String?
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  taxCategoryId String?
+  taxCategory   TaxCategory? @relation(fields: [taxCategoryId], references: [id])
+
+  // Receipt linkage
+  receiptId String?  @unique
+  receipt   Receipt? @relation(fields: [receiptId], references: [id])
+
+  // Reimbursement tracking
+  isReimbursable      Boolean  @default(false)
+  reimbursementStatus String   @default("none") // none, pending, submitted, approved, paid
+  reimbursedAmount    Decimal?
+  reimbursedDate      DateTime?
+
+  // Payment info
+  paymentMethod String? // cash, credit_card, debit, check, etc.
+  purchaser     String? // Who bought it
+
+  // Recurring
+  isRecurring   Boolean        @default(false)
+  recurringId   String?
+  recurringRule RecurringRule?  @relation(fields: [recurringId], references: [id])
+
+  // Metadata
+  notes             String?
+  isDeductible      Boolean @default(false)
+  isCapitalExpense  Boolean @default(false)
+  confidence        Float?  // AI confidence score (0-1)
+  source            String  @default("manual") // manual, receipt_scan, import, recurring
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tags ExpenseTag[]
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([date])
+  @@index([categoryId])
+  @@index([userId, date])
+  @@index([userId, projectId, date])
+}
+
+// ─── Receipts ────────────────────────────────────────────────────
+
+model Receipt {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // File storage
+  fileName     String
+  originalName String
+  mimeType     String
+  fileSize     Int
+  storagePath  String
+  storageType  String @default("local")
+  thumbnailPath String?
+
+  // AI Processing
+  processingStatus String  @default("pending") // pending, processing, completed, failed
+  aiRawResponse    String? // Full JSON response from Claude
+  aiConfidence     Float?
+
+  // Extracted data
+  extractedVendor   String?
+  extractedAmount   Decimal?
+  extractedDate     DateTime?
+  extractedItems    String? // JSON array of line items
+  extractedCategory String?
+  extractedTaxInfo  String?
+
+  // Duplicate detection
+  fingerprint   String?
+  isDuplicate   Boolean @default(false)
+  duplicateOfId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expense Expense?
+
+  @@index([userId])
+  @@index([fingerprint])
+  @@index([processingStatus])
+}
+
+// ─── Deposits / Income ───────────────────────────────────────────
+
+model Deposit {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  source      String
+  description String?
+  amount      Decimal
+  currency    String   @default("USD")
+  date        DateTime
+
+  isIncome       Boolean @default(true)
+  incomeCategory String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([date])
+}
+
+// ─── Categories ──────────────────────────────────────────────────
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  icon      String?
+  color     String   @default("#6b7280")
+  parentId  String?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  sortOrder Int      @default(0)
+  isDefault Boolean  @default(false)
+
+  expenses Expense[]
+  budgets  Budget[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+// ─── IRS Tax Categories ──────────────────────────────────────────
+
+model TaxCategory {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  schedule    String  // "Schedule C", "Schedule E", etc.
+  line        String? // Line number on tax form
+  description String?
+
+  expenses Expense[]
+}
+
+// ─── Tags ────────────────────────────────────────────────────────
+
+model Tag {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  color  String @default("#6b7280")
+
+  expenses ExpenseTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ExpenseTag {
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, tagId])
+}
+
+// ─── Recurring Expenses ──────────────────────────────────────────
+
+model RecurringRule {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  frequency  String    // daily, weekly, biweekly, monthly, quarterly, yearly
+  interval   Int       @default(1)
+  dayOfMonth Int?
+  dayOfWeek  Int?
+  startDate  DateTime
+  endDate    DateTime?
+  lastRun    DateTime?
+  nextRun    DateTime?
+  isActive   Boolean   @default(true)
+
+  expenses Expense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ─── Mileage Tracking ────────────────────────────────────────────
+
+model MileageEntry {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime
+  startLocation String
+  endLocation   String
+  distance      Decimal
+  purpose       String
+  roundTrip     Boolean  @default(false)
+  rateUsed      Decimal
+  deduction     Decimal
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ─── Budgets ─────────────────────────────────────────────────────
+
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  amount     Decimal
+  period     String   // monthly, quarterly, yearly
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+}
