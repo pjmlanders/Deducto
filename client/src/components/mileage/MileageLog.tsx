@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { useMileage, useMileageSummary, useCreateMileage, useDeleteMileage } from '@/hooks/useMileage';
+import { useSavedLocations } from '@/hooks/useSavedLocations';
+import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Car, Plus, Trash2, MapPin, X, Route, Loader2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Car, Plus, Trash2, MapPin, X, Route, Loader2, Bookmark } from 'lucide-react';
 import { formatCurrency, formatDate, formatDateInput } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -26,7 +35,6 @@ async function calculateRoute(start: { lat: number; lng: number }, end: { lat: n
   if (!res.ok) return null;
   const data = await res.json();
   if (data.code !== 'Ok' || !data.routes?.length) return null;
-  // Convert meters to miles, round to 1 decimal
   return Math.round(data.routes[0].distance * 0.000621371 * 10) / 10;
 }
 
@@ -41,11 +49,16 @@ export function MileageLog() {
 
   const { data: entries, isLoading } = useMileage(year);
   const { data: summary } = useMileageSummary(year);
+  const { data: savedLocations } = useSavedLocations();
+  const { data: projectsData } = useProjects();
   const createMileage = useCreateMileage();
   const deleteMileage = useDeleteMileage();
 
+  const projects = projectsData?.data ?? [];
+
   const [form, setForm] = useState({
     date: formatDateInput(new Date()),
+    projectId: '',
     startLocation: '',
     endLocation: '',
     distance: '',
@@ -88,6 +101,7 @@ export function MileageLog() {
     e.preventDefault();
     await createMileage.mutateAsync({
       date: form.date,
+      projectId: form.projectId,
       startLocation: form.startLocation,
       endLocation: form.endLocation,
       distance: parseFloat(form.distance),
@@ -97,6 +111,7 @@ export function MileageLog() {
     });
     setForm({
       date: formatDateInput(new Date()),
+      projectId: '',
       startLocation: '',
       endLocation: '',
       distance: '',
@@ -108,7 +123,7 @@ export function MileageLog() {
     setShowForm(false);
   };
 
-  const isValid = form.date && form.startLocation && form.endLocation && form.distance && form.purpose;
+  const isValid = form.date && form.projectId && form.startLocation && form.endLocation && form.distance && form.purpose;
 
   return (
     <div className="space-y-6">
@@ -196,17 +211,55 @@ export function MileageLog() {
                   <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
                 </div>
                 <div>
-                  <Label>Distance (miles, one way) *</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.distance}
-                    onChange={(e) => setForm({ ...form, distance: e.target.value })}
-                    placeholder="0.0"
-                  />
+                  <Label>Project *</Label>
+                  <Select value={form.projectId} onValueChange={(v) => setForm({ ...form, projectId: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                            {p.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+
+              {/* Saved locations quick-fill */}
+              {savedLocations && savedLocations.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <Bookmark className="h-3 w-3" /> Saved locations — click to fill start or end:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {savedLocations.map((loc) => (
+                      <div key={loc.id} className="flex rounded-md border overflow-hidden text-xs">
+                        <button
+                          type="button"
+                          className="px-2 py-1 hover:bg-muted transition-colors font-medium"
+                          title={loc.address}
+                          onClick={() => setForm((f) => ({ ...f, startLocation: loc.address }))}
+                        >
+                          {loc.name} →Start
+                        </button>
+                        <div className="w-px bg-border" />
+                        <button
+                          type="button"
+                          className="px-2 py-1 hover:bg-muted transition-colors"
+                          onClick={() => setForm((f) => ({ ...f, endLocation: loc.address }))}
+                        >
+                          End
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -253,10 +306,24 @@ export function MileageLog() {
                 </div>
               )}
 
-              <div>
-                <Label>Purpose *</Label>
-                <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="Business meeting, site visit, etc." />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Distance (miles, one way) *</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={form.distance}
+                    onChange={(e) => setForm({ ...form, distance: e.target.value })}
+                    placeholder="0.0"
+                  />
+                </div>
+                <div>
+                  <Label>Purpose *</Label>
+                  <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="Business meeting, site visit…" />
+                </div>
               </div>
+
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.roundTrip} onChange={(e) => setForm({ ...form, roundTrip: e.target.checked })} />
@@ -301,10 +368,21 @@ export function MileageLog() {
                   <div className="flex items-center gap-3 min-w-0">
                     <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-medium text-sm">
-                        {entry.startLocation} → {entry.endLocation}
-                        {entry.roundTrip && <Badge variant="outline" className="ml-2 text-xs">Round trip</Badge>}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-sm">
+                          {entry.startLocation} → {entry.endLocation}
+                          {entry.roundTrip && <Badge variant="outline" className="ml-2 text-xs">Round trip</Badge>}
+                        </p>
+                        {entry.project && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs"
+                            style={{ borderColor: entry.project.color, color: entry.project.color }}
+                          >
+                            {entry.project.name}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{entry.purpose}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.date)}</p>
                     </div>

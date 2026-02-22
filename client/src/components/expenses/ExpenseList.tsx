@@ -42,6 +42,10 @@ export function ExpenseList() {
   const bulkDelete = useBulkDeleteExpenses();
   const bulkCategorize = useBulkCategorize();
 
+  const projectList = Array.isArray(projects?.data) ? projects.data : [];
+  const categoryList = Array.isArray(categories) ? categories : [];
+  const tagList = Array.isArray(tags) ? tags : [];
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -52,11 +56,11 @@ export function ExpenseList() {
   };
 
   const toggleSelectAll = () => {
-    if (!expenses?.data) return;
-    if (selectedIds.size === expenses.data.length) {
+    if (!expenseList.length) return;
+    if (selectedIds.size === expenseList.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(expenses.data.map((e) => e.id)));
+      setSelectedIds(new Set(expenseList.map((e) => e.id)));
     }
   };
 
@@ -83,6 +87,7 @@ export function ExpenseList() {
   };
 
   const { data: expenses, isLoading } = useExpenses(activeFilters);
+  const expenseList = Array.isArray(expenses?.data) ? expenses.data : [];
 
   return (
     <div className="space-y-4">
@@ -142,7 +147,7 @@ export function ExpenseList() {
                   <SelectTrigger><SelectValue placeholder="All projects" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All projects</SelectItem>
-                    {projects?.data?.map((p) => (
+                    {projectList.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -157,7 +162,7 @@ export function ExpenseList() {
                   <SelectTrigger><SelectValue placeholder="All categories" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
-                    {categories?.map((c) => (
+                    {categoryList.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -196,11 +201,11 @@ export function ExpenseList() {
                 </Select>
               </div>
             </div>
-            {tags && tags.length > 0 && (
+            {tagList.length > 0 && (
               <div className="mt-3">
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Tags</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {tags.map((tag) => {
+                  {tagList.map((tag) => {
                     const currentTagIds = filters.tagIds?.split(',').filter(Boolean) || [];
                     const isSelected = currentTagIds.includes(tag.id);
                     return (
@@ -253,7 +258,7 @@ export function ExpenseList() {
               <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
                 <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Set category..." /></SelectTrigger>
                 <SelectContent>
-                  {categories?.map((c) => (
+                  {categoryList.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -283,19 +288,19 @@ export function ExpenseList() {
             </Card>
           ))}
         </div>
-      ) : expenses?.data?.length ? (
+      ) : expenseList.length > 0 ? (
         <div className="space-y-2">
           {/* Select All */}
           <div className="flex items-center gap-2 px-2 text-sm text-muted-foreground">
             <button onClick={toggleSelectAll} className="p-1 hover:text-foreground">
-              {selectedIds.size === expenses.data.length && expenses.data.length > 0
+              {selectedIds.size === expenseList.length && expenseList.length > 0
                 ? <CheckSquare className="h-4 w-4" />
                 : <Square className="h-4 w-4" />
               }
             </button>
             <span>Select all</span>
           </div>
-          {expenses.data.map((expense) => (
+          {expenseList.map((expense) => (
             <div key={expense.id} className="flex items-center gap-2">
               <button
                 onClick={(e) => { e.preventDefault(); toggleSelect(expense.id); }}

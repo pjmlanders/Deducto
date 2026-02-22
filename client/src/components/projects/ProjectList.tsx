@@ -29,6 +29,8 @@ export function ProjectList() {
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3b82f6');
 
+  const projectList = Array.isArray(projects?.data) ? projects.data : [];
+
   const handleCreate = async () => {
     if (!name.trim()) return;
     await createProject.mutateAsync({ name, description, color });
@@ -60,9 +62,9 @@ export function ProjectList() {
             </Card>
           ))}
         </div>
-      ) : projects?.data?.length ? (
+      ) : projectList.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.data.map((project) => (
+          {projectList.map((project) => (
             <Link key={project.id} to={`/projects/${project.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader className="pb-3">

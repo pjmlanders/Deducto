@@ -17,8 +17,8 @@ import { Button } from '@/components/ui/button';
 
 const mainNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/projects', icon: FolderOpen, label: 'Projects' },
+  { to: '/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/deposits', icon: PiggyBank, label: 'Deposits' },
   { to: '/mileage', icon: Car, label: 'Mileage' },
 ];

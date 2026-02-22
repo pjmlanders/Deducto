@@ -11,12 +11,13 @@ import type {
   Deposit,
   Receipt,
   MileageEntry,
+  SavedLocation,
   Budget,
   BudgetStatus,
   PaginatedResponse,
 } from '@/types';
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '') + '/api/v1';
+export const API_BASE = (import.meta.env.VITE_API_URL ?? '') + '/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -221,10 +222,10 @@ export const mileageApi = {
   get: (id: string) =>
     api.get<MileageEntry>(`/mileage/${id}`).then((r) => r.data),
 
-  create: (data: { date: string; startLocation: string; endLocation: string; distance: number; purpose: string; roundTrip?: boolean; notes?: string }) =>
+  create: (data: { date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip?: boolean; notes?: string }) =>
     api.post<MileageEntry>('/mileage', data).then((r) => r.data),
 
-  update: (id: string, data: Partial<{ date: string; startLocation: string; endLocation: string; distance: number; purpose: string; roundTrip: boolean; notes: string }>) =>
+  update: (id: string, data: Partial<{ date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip: boolean; notes: string }>) =>
     api.put<MileageEntry>(`/mileage/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
@@ -232,6 +233,15 @@ export const mileageApi = {
 
   summary: (params: { year?: number } = {}) =>
     api.get('/mileage/summary', { params }).then((r) => r.data),
+};
+
+// ─── Saved Locations ─────────────────────────────────────────────
+
+export const savedLocationsApi = {
+  list: () => api.get<SavedLocation[]>('/saved-locations').then((r) => r.data),
+  create: (data: { name: string; address: string }) =>
+    api.post<SavedLocation>('/saved-locations', data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/saved-locations/${id}`).then((r) => r.data),
 };
 
 // ─── Reports ─────────────────────────────────────────────────────

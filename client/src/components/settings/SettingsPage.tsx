@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCategories, useCreateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { useTags, useCreateTag, useDeleteTag } from '@/hooks/useTags';
 import { useBudgets, useCreateBudget, useDeleteBudget } from '@/hooks/useBudgets';
+import { useSavedLocations, useCreateSavedLocation, useDeleteSavedLocation } from '@/hooks/useSavedLocations';
 import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Settings, Tag, Target } from 'lucide-react';
+import { Plus, Trash2, Tag, Target, MapPin } from 'lucide-react';
 import { DEFAULT_CATEGORY_COLORS } from '@/lib/constants';
 import { formatCurrency } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -38,9 +39,22 @@ export function SettingsPage() {
   const createBudget = useCreateBudget();
   const deleteBudget = useDeleteBudget();
   const [newBudget, setNewBudget] = useState({ projectId: '', categoryId: '', amount: '', period: 'monthly' });
+
+  const { data: savedLocations } = useSavedLocations();
+  const createSavedLocation = useCreateSavedLocation();
+  const deleteSavedLocation = useDeleteSavedLocation();
+  const [newLocation, setNewLocation] = useState({ name: '', address: '' });
+  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
+
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
   const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
   const [deleteBudgetId, setDeleteBudgetId] = useState<string | null>(null);
+
+  const handleAddLocation = async () => {
+    if (!newLocation.name.trim() || !newLocation.address.trim()) return;
+    await createSavedLocation.mutateAsync({ name: newLocation.name.trim(), address: newLocation.address.trim() });
+    setNewLocation({ name: '', address: '' });
+  };
 
   const handleAddBudget = async () => {
     if (!newBudget.amount) return;
@@ -274,6 +288,71 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Saved Locations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Saved Locations
+          </CardTitle>
+          <CardDescription>Save addresses for quick entry when logging mileage</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
+            <div>
+              <Label className="text-xs">Name</Label>
+              <Input
+                value={newLocation.name}
+                onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                placeholder="Home, Work, Client A…"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddLocation()}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Address</Label>
+              <Input
+                value={newLocation.address}
+                onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
+                placeholder="123 Main St, City, State"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddLocation()}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleAddLocation}
+                disabled={!newLocation.name.trim() || !newLocation.address.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {savedLocations?.map((loc) => (
+              <div key={loc.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-accent">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{loc.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
+                  onClick={() => setDeleteLocationId(loc.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            {!savedLocations?.length && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No saved locations yet. Add one above.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Info */}
       <Card>
         <CardHeader>
@@ -311,6 +390,14 @@ export function SettingsPage() {
         description="This budget rule will be removed. Your expense history is not affected."
         onConfirm={() => { deleteBudget.mutate(deleteBudgetId!); setDeleteBudgetId(null); }}
         isPending={deleteBudget.isPending}
+      />
+      <ConfirmDialog
+        open={!!deleteLocationId}
+        onOpenChange={(open) => !open && setDeleteLocationId(null)}
+        title="Delete saved location?"
+        description="This location will be removed from your saved list."
+        onConfirm={() => { deleteSavedLocation.mutate(deleteLocationId!); setDeleteLocationId(null); }}
+        isPending={deleteSavedLocation.isPending}
       />
     </div>
   );

@@ -136,6 +136,8 @@ export interface Deposit {
 export interface MileageEntry {
   id: string;
   date: string;
+  projectId: string | null;
+  project: { id: string; name: string; color: string } | null;
   startLocation: string;
   endLocation: string;
   distance: string | number;
@@ -144,6 +146,13 @@ export interface MileageEntry {
   rateUsed: string | number;
   deduction: string | number;
   notes: string | null;
+  createdAt: string;
+}
+
+export interface SavedLocation {
+  id: string;
+  name: string;
+  address: string;
   createdAt: string;
 }
 

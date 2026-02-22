@@ -4,10 +4,13 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ApiStatusBanner } from '@/components/ApiStatusBanner';
 
 export function Layout() {
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen flex-col">
+      <ApiStatusBanner />
+      <div className="flex flex-1 overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
@@ -19,6 +22,7 @@ export function Layout() {
           </div>
         </main>
         <MobileNav />
+      </div>
       </div>
       <Toaster position="bottom-right" richColors closeButton />
     </div>

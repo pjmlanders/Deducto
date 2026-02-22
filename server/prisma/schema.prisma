@@ -17,16 +17,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects       Project[]
-  expenses       Expense[]
-  deposits       Deposit[]
-  receipts       Receipt[]
-  mileageEntries MileageEntry[]
-  tags           Tag[]
-  categories     Category[]
-  budgets        Budget[]
-  recurringRules RecurringRule[]
-  settings       UserSettings?
+  projects        Project[]
+  expenses        Expense[]
+  deposits        Deposit[]
+  receipts        Receipt[]
+  mileageEntries  MileageEntry[]
+  tags            Tag[]
+  categories      Category[]
+  budgets         Budget[]
+  recurringRules  RecurringRule[]
+  settings        UserSettings?
+  savedLocations  SavedLocation[]
 }
 
 model UserSettings {
@@ -54,9 +55,10 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  expenses Expense[]
-  deposits Deposit[]
-  budgets  Budget[]
+  expenses       Expense[]
+  deposits       Deposit[]
+  budgets        Budget[]
+  mileageEntries MileageEntry[]
 
   @@index([userId])
   @@index([userId, isActive])
@@ -285,6 +287,8 @@ model MileageEntry {
   id            String   @id @default(uuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   date          DateTime
   startLocation String
   endLocation   String
@@ -298,7 +302,22 @@ model MileageEntry {
   updatedAt     DateTime @updatedAt
 
   @@index([userId])
+  @@index([projectId])
   @@index([date])
+}
+
+// ─── Saved Locations ─────────────────────────────────────────────
+
+model SavedLocation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   // "Home", "Work", "Client Office", etc.
+  address   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 // ─── Budgets ─────────────────────────────────────────────────────

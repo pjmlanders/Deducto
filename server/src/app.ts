@@ -18,6 +18,7 @@ import tagRoutes from './routes/tags.js';
 import mileageRoutes from './routes/mileage.js';
 import budgetRoutes from './routes/budgets.js';
 import recurringRoutes from './routes/recurring.js';
+import savedLocationRoutes from './routes/savedLocations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -77,6 +78,7 @@ export async function buildApp() {
   await app.register(mileageRoutes, { prefix: '/api/v1' });
   await app.register(budgetRoutes, { prefix: '/api/v1' });
   await app.register(recurringRoutes, { prefix: '/api/v1' });
+  await app.register(savedLocationRoutes, { prefix: '/api/v1' });
 
   return app;
 }

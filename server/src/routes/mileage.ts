@@ -22,6 +22,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     const [data, total] = await Promise.all([
       fastify.prisma.mileageEntry.findMany({
         where,
+        include: { project: { select: { id: true, name: true, color: true } } },
         orderBy: { date: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -39,6 +40,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { id: string } }>('/mileage/:id', async (request, reply) => {
     const entry = await fastify.prisma.mileageEntry.findFirst({
       where: { id: request.params.id, userId: request.userId },
+      include: { project: { select: { id: true, name: true, color: true } } },
     });
     if (!entry) return reply.status(404).send({ error: 'Mileage entry not found' });
     return entry;
@@ -52,14 +54,15 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
       endLocation: string;
       distance: number;
       purpose: string;
+      projectId?: string;
       roundTrip?: boolean;
       notes?: string;
     };
   }>('/mileage', async (request, reply) => {
-    const { date, startLocation, endLocation, distance, purpose, roundTrip = false, notes } = request.body;
+    const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip = false, notes } = request.body;
 
-    if (!date || !startLocation || !endLocation || !distance || !purpose) {
-      return reply.status(400).send({ error: 'date, startLocation, endLocation, distance, and purpose are required' });
+    if (!date || !startLocation || !endLocation || !distance || !purpose || !projectId) {
+      return reply.status(400).send({ error: 'date, startLocation, endLocation, distance, purpose, and projectId are required' });
     }
 
     const actualDistance = roundTrip ? distance * 2 : distance;
@@ -69,6 +72,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     const entry = await fastify.prisma.mileageEntry.create({
       data: {
         userId: request.userId,
+        projectId,
         date: new Date(date),
         startLocation,
         endLocation,
@@ -79,6 +83,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
         deduction,
         notes: notes || null,
       },
+      include: { project: { select: { id: true, name: true, color: true } } },
     });
 
     return reply.status(201).send(entry);
@@ -93,6 +98,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
       endLocation?: string;
       distance?: number;
       purpose?: string;
+      projectId?: string;
       roundTrip?: boolean;
       notes?: string;
     };
@@ -102,7 +108,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (!existing) return reply.status(404).send({ error: 'Mileage entry not found' });
 
-    const { date, startLocation, endLocation, distance, purpose, roundTrip, notes } = request.body;
+    const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip, notes } = request.body;
 
     // Recalculate distance/deduction if either distance or roundTrip changes
     const newRoundTrip = roundTrip ?? existing.roundTrip;
@@ -122,10 +128,12 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
         ...(endLocation && { endLocation }),
         ...(actualDistance != null && { distance: actualDistance }),
         ...(purpose && { purpose }),
+        ...(projectId !== undefined && { projectId: projectId || null }),
         ...(roundTrip != null && { roundTrip }),
         ...(deduction != null && { deduction }),
         ...(notes !== undefined && { notes: notes || null }),
       },
+      include: { project: { select: { id: true, name: true, color: true } } },
     });
 
     return entry;

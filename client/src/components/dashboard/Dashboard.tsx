@@ -70,6 +70,14 @@ export function Dashboard() {
     queryFn: () => reportsApi.trend({ months: 12 }),
   });
 
+  // Guard against unexpected API responses (e.g. when backend URL is missing in production)
+  const projectList = Array.isArray(projects?.data) ? projects.data : [];
+  const trendData = Array.isArray(trend) ? trend : [];
+  const budgetStatusList = Array.isArray(budgetStatus) ? budgetStatus : [];
+  const categoryBreakdown = Array.isArray(monthly?.categoryBreakdown) ? monthly.categoryBreakdown : [];
+  const dailySpending = Array.isArray(monthly?.dailySpending) ? monthly.dailySpending : [];
+  const topVendors = Array.isArray(monthly?.topVendors) ? monthly.topVendors : [];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -91,7 +99,7 @@ export function Dashboard() {
       </div>
 
       {/* Project Tiles */}
-      {projects?.data && projects.data.length > 0 && (
+      {projectList.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Projects</h2>
@@ -100,7 +108,7 @@ export function Dashboard() {
             </Button>
           </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {projects.data.slice(0, 6).map((project) => (
+            {projectList.slice(0, 6).map((project) => (
               <Card
                 key={project.id}
                 className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
@@ -212,7 +220,7 @@ export function Dashboard() {
               </div>
             </div>
             <div className="text-3xl font-bold tracking-tight">
-              {projects?.data?.length || 0}
+              {projectList.length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               <Link to="/projects" className="text-primary hover:underline">View all</Link>
@@ -222,7 +230,7 @@ export function Dashboard() {
       </div>
 
       {/* Charts Row: Category Pie + Daily Spending Bar */}
-      {monthly?.categoryBreakdown && monthly.categoryBreakdown.length > 0 && (
+      {categoryBreakdown.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Category Pie Chart */}
           <Card>
@@ -231,7 +239,7 @@ export function Dashboard() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const pieData = monthly.categoryBreakdown.map((item: any, i: number) => ({
+                const pieData = categoryBreakdown.map((item: any, i: number) => ({
                   name: item.category?.name || 'Uncategorized',
                   value: Number(item.total) || 0,
                   color: item.category?.color || CHART_COLORS[i % CHART_COLORS.length],
@@ -271,14 +279,14 @@ export function Dashboard() {
           </Card>
 
           {/* Daily Spending Bar Chart */}
-          {monthly?.dailySpending && monthly.dailySpending.length > 0 && (
+          {dailySpending.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Daily Spending</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={monthly.dailySpending.map((d: any) => ({
+                  <BarChart data={dailySpending.map((d: any) => ({
                     day: new Date(d.day).getDate(),
                     total: Number(d.total) || 0,
                   }))}>
@@ -296,14 +304,14 @@ export function Dashboard() {
       )}
 
       {/* Spending Trend (Last 12 Months) */}
-      {trend && trend.length > 0 && (
+      {trendData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Spending Trend (12 Months)</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={trend.map((t: any) => ({
+              <LineChart data={trendData.map((t: any) => ({
                 label: `${monthNames[Number(t.month) - 1]} ${String(t.year).slice(2)}`,
                 total: Number(t.total) || 0,
               }))}>
@@ -326,7 +334,7 @@ export function Dashboard() {
       )}
 
       {/* Budget Progress */}
-      {budgetStatus && budgetStatus.length > 0 && (
+      {budgetStatusList.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -341,7 +349,7 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budgetStatus.map((b) => {
+              {budgetStatusList.map((b) => {
                 const barColor = b.status === 'over' ? '#ef4444' : b.status === 'warning' ? '#f59e0b' : '#10b981';
                 return (
                   <div key={b.id}>
@@ -377,14 +385,14 @@ export function Dashboard() {
       )}
 
       {/* Top Vendors */}
-      {monthly?.topVendors && monthly.topVendors.length > 0 && (
+      {topVendors.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Top Vendors</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {monthly.topVendors.slice(0, 5).map((vendor: any, i: number) => (
+              {topVendors.slice(0, 5).map((vendor: any, i: number) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div className="flex items-center gap-2">
                     <Receipt className="h-4 w-4 text-muted-foreground" />
