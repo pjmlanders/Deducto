@@ -1,10 +1,10 @@
-# Expense Tracker PWA
+# Deducto PWA
 
 ## Architecture
 - **Monorepo** with npm workspaces: `client/`, `server/`, `shared/`
 - **Frontend**: React 19 + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - **Backend**: Fastify + TypeScript + Prisma ORM + PostgreSQL
-- **Auth**: Clerk (works without key in dev mode with mock user)
+- **Auth**: Clerk (works without key in dev mode with mock `dev_user`)
 - **AI**: Claude API (Anthropic) for receipt scanning via vision
 - **Deployment**: Vercel (client) + Railway (server + DB)
 
@@ -29,8 +29,21 @@
 ## Database
 - PostgreSQL via Prisma ORM
 - Schema: `server/prisma/schema.prisma`
-- Main models: User, Project, Expense, Receipt, Deposit, Category, TaxCategory, Tag, MileageEntry, Budget
+- Models: User, UserSettings, Project, Expense, Receipt, Deposit, Category, TaxCategory, Tag, ExpenseTag, RecurringRule, MileageEntry, Budget, SavedLocation
 - All records scoped by `userId` for multi-tenancy
+- Production DB: Railway PostgreSQL (`Postgres-hQ0m`)
+- To push schema changes to production: `DATABASE_URL="<public_url>" npm run db:push`
+
+## Deployment
+- **Client**: Vercel — `https://client-paul-landers-projects.vercel.app`
+  - GitHub repo: `https://github.com/pjmlanders/Deducto.git` (auto-deploys on push to master)
+  - Env var: `VITE_API_URL=https://deducto-server-production.up.railway.app`
+  - Root `vercel.json` handles monorepo build (`npm run build --workspace=client`)
+- **Server**: Railway — `https://deducto-server-production.up.railway.app`
+  - Service: `deducto-server` in project `Deducto`
+  - Env vars set: `DATABASE_URL`, `NODE_ENV=production`, `ANTHROPIC_API_KEY`
+  - Deploy: `cd server && railway up --service deducto-server`
+- **Note**: Vercel has "Vercel Authentication" protection enabled — disable in Project Settings → Deployment Protection for public access
 
 ## AI Receipt Processing
 - Claude Sonnet for vision-based receipt parsing
@@ -53,7 +66,7 @@
 - Claude AI vision integration for receipt processing (PDF + image)
 - Receipt review/edit/accept flow with confidence scores + duplicate detection
 
-### Phase 2-5: Features (Feb 18-19, 2026)
+### Phase 2–5: Features (Feb 18–19, 2026)
 - **Dashboard Charts**: Recharts pie chart (category breakdown), bar chart (daily spending), line chart (12-month trend)
 - **CSV Export**: Server endpoint with csv-stringify, client download button
 - **PDF Export**: Server endpoint with pdfkit, formatted A4 reports
@@ -67,10 +80,14 @@
 - **Default Categories**: 10 seeded categories (Renovations, Furnishings, Maintenance, etc.)
 - **Database Inspector**: Prisma Studio available via `cd server && npx prisma studio`
 
-### Phase 6: Polish & Deploy (not started)
-- Vercel deployment (frontend) + Railway deployment (backend + PostgreSQL)
-- S3-compatible storage setup
-- Recurring expense rules + cron
-- Performance optimization (lazy loading, code splitting)
-- CSV/Excel data import
-- Mobile device testing (camera, install, offline)
+### Phase 6: Project-Centric Workflow (Feb 22, 2026)
+- **Rebrand**: Renamed from "Expense Tracker" to "Deducto" (app name, PWA manifest, package names, UI)
+- **Dashboard project tiles**: Responsive grid above analytics — colored border, expense/deposit/net totals per project
+- **ProjectDetail entry cards**: 3-card grid (Scan Receipt, Add Expense, Log Mileage) replacing old header buttons
+- **Mileage route calculator**: "Calculate Route" toggle uses Nominatim geocoding + OSRM routing (no API key required) to auto-fill distance from start/end addresses
+- **Mileage project field**: Project selector (required) on mileage form; project badge shown on trip list entries
+- **Saved Locations**: `SavedLocation` model + `/api/v1/saved-locations` CRUD; manage in Settings; quick-fill chips in mileage form
+- **Capital Expense flag**: `isCapitalExpense` boolean on Expense model — checkbox in expense form, badge in expense detail
+- **Sidebar reorder**: Dashboard → Projects → Expenses → Deposits → Mileage → (Tools) Upload, Review, Reports
+- **Logo as home link**: Deducto wordmark in sidebar navigates to `/`
+- **Deployment**: Vercel (client) + Railway (server + PostgreSQL) — both live in production
