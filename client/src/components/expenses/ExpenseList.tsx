@@ -92,9 +92,9 @@ export function ExpenseList() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Expenses</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Expenses</h1>
           <p className="text-sm text-muted-foreground">
             {expenses?.pagination?.total || 0} total expenses
           </p>
@@ -314,8 +314,8 @@ export function ExpenseList() {
               <Link to={`/expenses/${expense.id}`} className="flex-1 min-w-0">
               <Card className={`hover:shadow-sm transition-shadow ${selectedIds.has(expense.id) ? 'ring-1 ring-primary' : ''}`}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {expense.receipt && (
                         <Receipt className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       )}
@@ -332,10 +332,10 @@ export function ExpenseList() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-3 flex-shrink-0 justify-end">
                       <div className="text-right">
                         <p className="font-semibold text-sm">{formatCurrency(expense.amount)}</p>
-                        <div className="flex gap-1 justify-end mt-1">
+                        <div className="flex flex-wrap gap-1 justify-end mt-1">
                           {expense.category && (
                             <Badge variant="secondary" className="text-xs">
                               {expense.category.name}

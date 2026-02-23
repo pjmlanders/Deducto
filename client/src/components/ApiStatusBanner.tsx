@@ -32,10 +32,10 @@ export function ApiStatusBanner() {
   const hasApiUrl = typeof apiUrl === 'string' && apiUrl.length > 0;
 
   return (
-    <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-        <p className="text-sm text-amber-800 dark:text-amber-200">
+    <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap min-w-0">
+      <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0 overflow-hidden">
+        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" />
+        <p className="text-sm text-amber-800 dark:text-amber-200 break-words">
           Cannot reach the server.
           {hasApiUrl
             ? ' Backend may be down or CORS may be blocking requests. If you just added or changed VITE_API_URL, trigger a new deploy so the new value is used.'

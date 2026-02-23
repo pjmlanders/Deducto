@@ -79,13 +79,13 @@ export function ReportsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+    <div className="space-y-6 min-w-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Reports</h1>
           <p className="text-sm text-muted-foreground">Financial summaries and tax reports</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0 flex-wrap">
           <Button
             variant="outline"
             onClick={() => reportsApi.exportCsv({

@@ -8,14 +8,14 @@ import { ApiStatusBanner } from '@/components/ApiStatusBanner';
 
 export function Layout() {
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       <ApiStatusBanner />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-          <div className="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 lg:pb-0">
+          <div className="container mx-auto w-full max-w-7xl min-w-0 px-4 py-4 sm:p-6 lg:p-8">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>

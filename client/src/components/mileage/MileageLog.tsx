@@ -126,13 +126,13 @@ export function MileageLog() {
   const isValid = form.date && form.projectId && form.startLocation && form.endLocation && form.distance && form.purpose;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mileage Tracking</h1>
+    <div className="space-y-6 min-w-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Mileage Tracking</h1>
           <p className="text-sm text-muted-foreground">Track business mileage for tax deductions</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={() => setShowForm(!showForm)} className="flex-shrink-0">
           {showForm ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Plus className="h-4 w-4 mr-2" /> Log Trip</>}
         </Button>
       </div>
@@ -182,10 +182,10 @@ export function MileageLog() {
       {showForm && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
               <CardTitle className="text-lg">Log New Trip</CardTitle>
               {/* Distance mode toggle */}
-              <div className="flex rounded-lg border overflow-hidden text-sm">
+              <div className="flex rounded-lg border overflow-hidden text-sm flex-shrink-0">
                 <button
                   type="button"
                   className={`px-3 py-1.5 transition-colors ${distanceMode === 'enter' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
@@ -364,12 +364,12 @@ export function MileageLog() {
           {entries.data.map((entry) => (
             <Card key={entry.id}>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-sm">
+                        <p className="font-medium text-sm break-words">
                           {entry.startLocation} → {entry.endLocation}
                           {entry.roundTrip && <Badge variant="outline" className="ml-2 text-xs">Round trip</Badge>}
                         </p>

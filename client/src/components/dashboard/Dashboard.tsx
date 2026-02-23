@@ -79,20 +79,20 @@ export function Dashboard() {
   const topVendors = Array.isArray(monthly?.topVendors) ? monthly.topVendors : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })} Overview
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
+        <div className="flex gap-2 flex-shrink-0">
+          <Button asChild variant="outline" size="sm" className="sm:size-default">
             <Link to="/expenses/new">Add Expense</Link>
           </Button>
-          <Button asChild>
+          <Button asChild size="sm" className="sm:size-default">
             <Link to="/scan">Scan Receipt</Link>
           </Button>
         </div>
@@ -161,9 +161,9 @@ export function Dashboard() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 min-w-0">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Total Expenses</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/50">
@@ -180,7 +180,7 @@ export function Dashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Total Deposits</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950/50">
@@ -197,7 +197,7 @@ export function Dashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Net Balance</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
@@ -212,7 +212,7 @@ export function Dashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Active Projects</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -231,9 +231,9 @@ export function Dashboard() {
 
       {/* Charts Row: Category Pie + Daily Spending Bar */}
       {categoryBreakdown.length > 0 && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2 min-w-0 overflow-hidden">
           {/* Category Pie Chart */}
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle className="text-lg">Spending by Category</CardTitle>
             </CardHeader>
@@ -280,7 +280,7 @@ export function Dashboard() {
 
           {/* Daily Spending Bar Chart */}
           {dailySpending.length > 0 && (
-            <Card>
+            <Card className="min-w-0 overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-lg">Daily Spending</CardTitle>
               </CardHeader>

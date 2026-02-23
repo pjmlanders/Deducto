@@ -32,6 +32,16 @@ export async function buildApp() {
     },
   });
 
+  // Security headers (web app best practices)
+  app.addHook('onSend', async (_request, reply, payload) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-XSS-Protection', '1; mode=block');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Permissions-Policy', 'camera=(self), microphone=(self)');
+    return payload;
+  });
+
   // CORS
   await app.register(cors, {
     origin: process.env.NODE_ENV === 'production'

@@ -58,7 +58,7 @@ export function DepositList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Deposits</h1>
           <p className="text-sm text-muted-foreground">Track income and deposits</p>
