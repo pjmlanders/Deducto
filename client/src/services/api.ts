@@ -101,6 +101,10 @@ export const expensesApi = {
 
   updateReimbursement: (id: string, data: { reimbursementStatus: string; reimbursedAmount?: number; reimbursedDate?: string }) =>
     api.patch(`/expenses/${id}/reimburse`, data).then((r) => r.data),
+
+  /** Attach a pending receipt to an existing expense */
+  attachReceipt: (expenseId: string, receiptId: string) =>
+    api.post<Expense>(`/expenses/${expenseId}/receipts`, { receiptId }).then((r) => r.data),
 };
 
 // ─── Categories ──────────────────────────────────────────────────
@@ -189,6 +193,10 @@ export const receiptsApi = {
 
   accept: (id: string, data: ExpenseFormData) =>
     api.post<Expense>(`/receipts/${id}/accept`, data).then((r) => r.data),
+
+  /** Create one expense with multiple receipts attached */
+  acceptBatch: (data: { receiptIds: string[] } & Omit<ExpenseFormData, 'receiptId'>) =>
+    api.post<Expense>('/receipts/accept-batch', data).then((r) => r.data),
 
   delete: (id: string) =>
     api.delete(`/receipts/${id}`).then((r) => r.data),

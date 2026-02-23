@@ -80,21 +80,27 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6 min-w-0">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+      {/* Brand + Header */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <img src="/logo.svg" alt="" className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shrink-0" />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">Deducto</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Track expenses, scan receipts, generate tax reports</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })} Overview
           </p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button asChild variant="outline" size="sm" className="sm:size-default">
-            <Link to="/expenses/new">Add Expense</Link>
-          </Button>
-          <Button asChild size="sm" className="sm:size-default">
-            <Link to="/scan">Scan Receipt</Link>
-          </Button>
+          <div className="flex gap-2 flex-shrink-0">
+            <Button asChild variant="outline" size="sm" className="sm:size-default">
+              <Link to="/expenses/new">Add Expense</Link>
+            </Button>
+            <Button asChild size="sm" className="sm:size-default">
+              <Link to="/scan">Scan Receipt</Link>
+            </Button>
+          </div>
         </div>
       </div>
 

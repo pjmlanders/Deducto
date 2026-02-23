@@ -58,6 +58,11 @@ export const reimburseExpenseSchema = z.object({
   reimbursedDate: dateString.optional(),
 });
 
+export const attachReceiptToExpenseSchema = z.object({
+  receiptId: z.string().uuid(),
+});
+
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
 export type ReimburseExpenseInput = z.infer<typeof reimburseExpenseSchema>;
+export type AttachReceiptToExpenseInput = z.infer<typeof attachReceiptToExpenseSchema>;

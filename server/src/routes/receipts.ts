@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { validateWithZod } from '../utils/validate.js';
-import { acceptReceiptSchema } from '../schemas/receipts.js';
+import { acceptReceiptSchema, acceptBatchReceiptsSchema } from '../schemas/receipts.js';
 import { computeReceiptFingerprint } from '../utils/receiptFingerprint.js';
 
 const receiptRoutes: FastifyPluginAsync = async (fastify) => {
@@ -102,7 +102,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     const where: Prisma.ReceiptWhereInput = { userId: request.userId };
 
     if (query.status === 'pending') {
-      where.expense = null;
+      where.expenseId = null;
     } else if (query.status) {
       where.processingStatus = query.status;
     }
@@ -272,10 +272,86 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         project: { select: { id: true, name: true, color: true } },
         category: true,
         receipt: true,
+        receipts: true,
       },
     });
 
-    return reply.status(201).send(expense);
+    await fastify.prisma.receipt.update({
+      where: { id: receipt.id },
+      data: { expenseId: expense.id },
+    });
+
+    const withReceipts = await fastify.prisma.expense.findUnique({
+      where: { id: expense.id },
+      include: {
+        project: { select: { id: true, name: true, color: true } },
+        category: true,
+        receipt: true,
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+      },
+    });
+
+    return reply.status(201).send(withReceipts ?? expense);
+  });
+
+  // Accept multiple receipts as one expense (batch: one expense, many receipts)
+  fastify.post('/receipts/accept-batch', async (request, reply) => {
+    const body = validateWithZod(reply, acceptBatchReceiptsSchema, request.body);
+    if (body === undefined) return;
+
+    const receiptIds = body.receiptIds;
+    const receipts = await fastify.prisma.receipt.findMany({
+      where: { id: { in: receiptIds }, userId: request.userId, expenseId: null },
+    });
+    if (receipts.length !== receiptIds.length) {
+      return reply.status(400).send({
+        error: 'One or more receipts not found or already attached to an expense',
+      });
+    }
+
+    const firstReceipt = receipts[0];
+    const expense = await fastify.prisma.expense.create({
+      data: {
+        userId: request.userId,
+        projectId: body.projectId,
+        vendor: body.vendor,
+        description: body.description,
+        amount: body.amount,
+        date: new Date(body.date),
+        categoryId: body.categoryId ?? null,
+        taxCategoryId: body.taxCategoryId ?? null,
+        receiptId: firstReceipt.id,
+        isReimbursable: body.isReimbursable ?? false,
+        paymentMethod: body.paymentMethod ?? null,
+        purchaser: body.purchaser ?? null,
+        notes: body.notes ?? null,
+        isDeductible: body.isDeductible ?? false,
+        confidence: firstReceipt.aiConfidence,
+        source: 'receipt_scan',
+      },
+      include: {
+        project: { select: { id: true, name: true, color: true } },
+        category: true,
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+      },
+    });
+
+    await fastify.prisma.receipt.updateMany({
+      where: { id: { in: receiptIds } },
+      data: { expenseId: expense.id },
+    });
+
+    const withReceipts = await fastify.prisma.expense.findUnique({
+      where: { id: expense.id },
+      include: {
+        project: { select: { id: true, name: true, color: true } },
+        category: true,
+        receipt: true,
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+      },
+    });
+
+    return reply.status(201).send(withReceipts ?? expense);
   });
 
   // Delete receipt

@@ -69,3 +69,19 @@ export function useAcceptReceipt() {
     onError: () => toast.error('Failed to save expense'),
   });
 }
+
+export function useAcceptBatchReceipts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { receiptIds: string[] } & Omit<ExpenseFormData, 'receiptId'>) =>
+      receiptsApi.acceptBatch(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts', 'pending'] });
+      toast.success('Expense created with all receipts attached');
+    },
+    onError: () => toast.error('Failed to save expense'),
+  });
+}

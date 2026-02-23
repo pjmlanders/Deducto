@@ -75,9 +75,7 @@ export function Sidebar() {
       >
         <div className="flex h-14 items-center justify-between border-b px-4">
           <NavLink to="/" end onClick={closeSidebar} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold text-xs">
-              D
-            </div>
+            <img src="/logo.svg" alt="" className="h-8 w-8 rounded-lg" />
             <span className="font-semibold text-base tracking-tight">Deducto</span>
           </NavLink>
           <Button

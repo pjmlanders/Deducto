@@ -62,6 +62,8 @@ export interface Expense {
   taxCategory: { id: string; name: string; schedule: string } | null;
   receiptId: string | null;
   receipt: { id: string; thumbnailPath: string | null; processingStatus: string } | null;
+  /** All receipts attached to this expense (includes primary receipt) */
+  receipts?: Array<{ id: string; thumbnailPath: string | null; processingStatus: string; originalName?: string }>;
   isReimbursable: boolean;
   reimbursementStatus: string;
   reimbursedAmount: string | number | null;

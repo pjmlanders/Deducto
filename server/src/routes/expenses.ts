@@ -8,6 +8,7 @@ import {
   bulkDeleteExpensesSchema,
   bulkCategorizeExpensesSchema,
   reimburseExpenseSchema,
+  attachReceiptToExpenseSchema,
 } from '../schemas/expenses.js';
 
 const expenseRoutes: FastifyPluginAsync = async (fastify) => {
@@ -70,6 +71,7 @@ const expenseRoutes: FastifyPluginAsync = async (fastify) => {
           category: { select: { id: true, name: true, icon: true, color: true } },
           taxCategory: { select: { id: true, name: true, schedule: true } },
           receipt: { select: { id: true, thumbnailPath: true, processingStatus: true } },
+          receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
           tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
         },
       }),
@@ -88,6 +90,7 @@ const expenseRoutes: FastifyPluginAsync = async (fastify) => {
         category: true,
         taxCategory: true,
         receipt: true,
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
         tags: { include: { tag: true } },
         recurringRule: true,
       },
@@ -141,6 +144,13 @@ const expenseRoutes: FastifyPluginAsync = async (fastify) => {
         tags: { include: { tag: true } },
       },
     });
+
+    if (body.receiptId) {
+      await fastify.prisma.receipt.updateMany({
+        where: { id: body.receiptId, userId: request.userId },
+        data: { expenseId: expense.id },
+      });
+    }
 
     return reply.status(201).send(expense);
   });
@@ -235,6 +245,45 @@ const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { updated: result.count };
+  });
+
+  // Attach receipt to existing expense
+  fastify.post<{ Params: { id: string } }>('/expenses/:id/receipts', async (request, reply) => {
+    const expense = await fastify.prisma.expense.findFirst({
+      where: { id: request.params.id, userId: request.userId },
+    });
+    if (!expense) {
+      return reply.status(404).send({ error: 'Expense not found' });
+    }
+    const body = validateWithZod(reply, attachReceiptToExpenseSchema, request.body);
+    if (body === undefined) return;
+    const receipt = await fastify.prisma.receipt.findFirst({
+      where: { id: body.receiptId, userId: request.userId, expenseId: null },
+    });
+    if (!receipt) {
+      return reply.status(400).send({ error: 'Receipt not found or already attached to an expense' });
+    }
+    await fastify.prisma.receipt.update({
+      where: { id: receipt.id },
+      data: { expenseId: expense.id },
+    });
+    if (!expense.receiptId) {
+      await fastify.prisma.expense.update({
+        where: { id: expense.id },
+        data: { receiptId: receipt.id },
+      });
+    }
+    const updated = await fastify.prisma.expense.findUnique({
+      where: { id: expense.id },
+      include: {
+        project: { select: { id: true, name: true, color: true } },
+        category: true,
+        receipt: true,
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+        tags: { include: { tag: true } },
+      },
+    });
+    return reply.status(200).send(updated);
   });
 
   // Update reimbursement status

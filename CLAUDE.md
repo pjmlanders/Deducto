@@ -35,14 +35,17 @@
 - To push schema changes to production: `DATABASE_URL="<public_url>" npm run db:push`
 
 ## Deployment
-- **Client**: Vercel — `https://client-paul-landers-projects.vercel.app`
+- **Client**: Vercel — project `deducto` (renamed from `client`)
+  - Production URL: `https://deductoapp.com` (custom domain) or `https://deducto-paul-landers-projects.vercel.app`
   - GitHub repo: `https://github.com/pjmlanders/Deducto.git` (auto-deploys on push to master)
-  - Env var: `VITE_API_URL=https://deducto-server-production.up.railway.app`
-  - Root `vercel.json` handles monorepo build (`npm run build --workspace=client`)
+  - Env vars: `VITE_API_URL`, `VITE_CLERK_PUBLISHABLE_KEY`
+  - Root `vercel.json` handles monorepo build (`npm run build --workspace=client`, `--include=dev`)
 - **Server**: Railway — `https://deducto-server-production.up.railway.app`
   - Service: `deducto-server` in project `Deducto`
-  - Env vars set: `DATABASE_URL`, `NODE_ENV=production`, `ANTHROPIC_API_KEY`
+  - Env vars set: `DATABASE_URL`, `NODE_ENV=production`, `ANTHROPIC_API_KEY`, `CLERK_SECRET_KEY`
   - Deploy: `cd server && railway up --service deducto-server`
+- **Auth**: Clerk — add allowed domains in Clerk Dashboard → Configure → Domains
+  - `https://deductoapp.com`, `https://deducto-paul-landers-projects.vercel.app`
 - **Note**: Vercel has "Vercel Authentication" protection enabled — disable in Project Settings → Deployment Protection for public access
 
 ## AI Receipt Processing

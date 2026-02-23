@@ -88,7 +88,8 @@ model Expense {
 
   // Receipt linkage
   receiptId String?  @unique
-  receipt   Receipt? @relation(fields: [receiptId], references: [id])
+  receipt   Receipt? @relation("PrimaryReceipt", fields: [receiptId], references: [id])
+  receipts  Receipt[] @relation("ExpenseReceipts")
 
   // Reimbursement tracking
   isReimbursable      Boolean  @default(false)
@@ -159,12 +160,16 @@ model Receipt {
   isDuplicate   Boolean @default(false)
   duplicateOfId String?
 
+  // Link to expense (when accepted as part of an expense)
+  expenseId String?
+  expense   Expense? @relation("ExpenseReceipts", fields: [expenseId], references: [id], onDelete: SetNull)
+  primaryForExpense Expense? @relation("PrimaryReceipt")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  expense Expense?
-
   @@index([userId])
+  @@index([expenseId])
   @@index([fingerprint])
   @@index([processingStatus])
 }

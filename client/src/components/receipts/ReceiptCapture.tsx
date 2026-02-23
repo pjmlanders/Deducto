@@ -273,13 +273,38 @@ export function ReceiptCapture() {
           </Card>
 
           {batchDone && (
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => { setBatchUploads([]); setMode('select'); }}>
-                Upload More
-              </Button>
-              <Button className="flex-1" onClick={() => navigate(`/receipts${pq}`)}>
-                Review {batchSuccessCount} Receipt{batchSuccessCount !== 1 ? 's' : ''}
-              </Button>
+            <div className="space-y-3">
+              <p className="text-sm font-medium">How do you want to use these receipts?</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setBatchUploads([]); setMode('select'); }}
+                >
+                  Upload More
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate(`/receipts${pq}`)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  One expense per receipt ({batchSuccessCount} expenses)
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    const ids = batchUploads.filter((u) => u.status === 'done' && u.receiptId).map((u) => u.receiptId!);
+                    const q = new URLSearchParams();
+                    q.set('ids', ids.join(','));
+                    if (projectId) q.set('projectId', projectId);
+                    navigate(`/receipts/batch-accept?${q.toString()}`);
+                  }}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  One expense for all ({batchSuccessCount} receipts)
+                </Button>
+              </div>
             </div>
           )}
         </div>

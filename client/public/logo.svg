@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
   <defs>
-    <linearGradient id="deducto-g" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="deducto-logo-g" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#059669" />
       <stop offset="100%" stop-color="#10b981" />
     </linearGradient>
   </defs>
-  <rect width="100" height="100" rx="22" fill="url(#deducto-g)"/>
+  <rect width="100" height="100" rx="22" fill="url(#deducto-logo-g)"/>
   <text x="50" y="58" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="44" font-weight="700" text-anchor="middle" fill="white">D</text>
   <rect x="32" y="68" width="36" height="6" rx="3" fill="white"/>
 </svg>

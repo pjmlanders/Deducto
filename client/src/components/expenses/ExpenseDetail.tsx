@@ -212,20 +212,28 @@ export function ExpenseDetail() {
             </div>
           )}
 
-          {/* Receipt */}
-          {expense.receipt && (
+          {/* Receipt(s) */}
+          {(expense.receipts?.length ? expense.receipts : expense.receipt ? [expense.receipt] : []).length > 0 && (
             <div className="border-t pt-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase mb-2">Receipt</p>
-              <a
-                href={receiptsApi.getFileUrl(expense.receipt.id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline flex items-center gap-1"
-              >
-                <Receipt className="h-4 w-4" />
-                View Receipt
-                <ExternalLink className="h-3 w-3" />
-              </a>
+              <p className="text-xs font-medium text-muted-foreground uppercase mb-2">
+                Receipt{(expense.receipts?.length ?? (expense.receipt ? 1 : 0)) > 1 ? 's' : ''}
+              </p>
+              <ul className="space-y-2">
+                {(expense.receipts?.length ? expense.receipts : expense.receipt ? [expense.receipt] : []).map((r) => (
+                  <li key={r.id}>
+                    <a
+                      href={receiptsApi.getFileUrl(r.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Receipt className="h-4 w-4 shrink-0" />
+                      {'originalName' in r && r.originalName ? r.originalName : 'View receipt'}
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
               {expense.confidence != null && (
                 <p className="text-xs text-muted-foreground mt-1">
                   AI Confidence: {(expense.confidence * 100).toFixed(0)}%
