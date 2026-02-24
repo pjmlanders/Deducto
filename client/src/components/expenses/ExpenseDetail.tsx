@@ -216,7 +216,7 @@ export function ExpenseDetail() {
           {(expense.receipts?.length ? expense.receipts : expense.receipt ? [expense.receipt] : []).length > 0 && (
             <div className="border-t pt-4">
               <p className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                Receipt{(expense.receipts?.length ?? (expense.receipt ? 1 : 0)) > 1 ? 's' : ''}
+                Receipt{((expense.receipts?.length ?? (expense.receipt ? 1 : 0)) > 1) ? 's' : ''}
               </p>
               <ul className="space-y-2">
                 {(expense.receipts?.length ? expense.receipts : expense.receipt ? [expense.receipt] : []).map((r) => (
@@ -228,7 +228,7 @@ export function ExpenseDetail() {
                       className="text-sm text-primary hover:underline flex items-center gap-1"
                     >
                       <Receipt className="h-4 w-4 shrink-0" />
-                      {'originalName' in r && r.originalName ? r.originalName : 'View receipt'}
+                      {((r as { originalName?: string }).originalName) || 'View receipt'}
                       <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
                   </li>
