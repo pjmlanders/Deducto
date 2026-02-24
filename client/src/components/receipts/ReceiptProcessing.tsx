@@ -24,6 +24,7 @@ export function ReceiptProcessing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get('projectId');
+  const pq = projectId ? `?projectId=${projectId}` : '';
   const { data: receipt, isLoading, refetch } = useReceiptStatus(id || null);
   const { data: projects } = useProjects();
   const { data: categories } = useCategories();
@@ -88,7 +89,7 @@ export function ReceiptProcessing() {
       isDeductible: form.isDeductible,
     });
 
-    navigate(projectId ? `/projects/${projectId}` : '/expenses');
+    navigate(`/receipts${pq}`);
   };
 
   const isValid = form.projectId && form.vendor && form.description && form.amount && form.date;
@@ -277,7 +278,7 @@ export function ReceiptProcessing() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => navigate(projectId ? `/projects/${projectId}` : '/expenses')}>
+              <Button variant="outline" onClick={() => navigate(`/receipts${pq}`)}>
                 Skip
               </Button>
               <Button onClick={handleAccept} disabled={!isValid || acceptReceipt.isPending}>
