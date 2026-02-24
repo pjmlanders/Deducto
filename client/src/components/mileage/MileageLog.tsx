@@ -17,6 +17,7 @@ import {
 import { Car, Plus, Trash2, MapPin, X, Route, Loader2, Bookmark } from 'lucide-react';
 import { formatCurrency, formatDate, formatDateInput } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 
 const IRS_RATE = 0.70;
 
@@ -264,17 +265,17 @@ export function MileageLog() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Start {distanceMode === 'calculate' ? 'Address' : 'Location'} *</Label>
-                  <Input
+                  <AddressAutocomplete
                     value={form.startLocation}
-                    onChange={(e) => setForm({ ...form, startLocation: e.target.value })}
+                    onChange={(v) => setForm({ ...form, startLocation: v })}
                     placeholder={distanceMode === 'calculate' ? 'e.g., 123 Main St, City, State' : 'e.g., Home'}
                   />
                 </div>
                 <div>
                   <Label>End {distanceMode === 'calculate' ? 'Address' : 'Location'} *</Label>
-                  <Input
+                  <AddressAutocomplete
                     value={form.endLocation}
-                    onChange={(e) => setForm({ ...form, endLocation: e.target.value })}
+                    onChange={(v) => setForm({ ...form, endLocation: v })}
                     placeholder={distanceMode === 'calculate' ? 'e.g., 456 Oak Ave, City, State' : 'e.g., Client Office'}
                   />
                 </div>

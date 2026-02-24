@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -310,11 +311,10 @@ export function SettingsPage() {
             </div>
             <div>
               <Label className="text-xs">Address</Label>
-              <Input
+              <AddressAutocomplete
                 value={newLocation.address}
-                onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
+                onChange={(v) => setNewLocation({ ...newLocation, address: v })}
                 placeholder="123 Main St, City, State"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddLocation()}
               />
             </div>
             <div className="flex items-end">
