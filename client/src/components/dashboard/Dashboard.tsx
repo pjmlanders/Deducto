@@ -24,7 +24,7 @@ import { PROJECT_COLORS } from '@/lib/constants';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  LineChart, Line,
+  LineChart, Line, Legend,
 } from 'recharts';
 
 const CHART_COLORS = [
@@ -53,7 +53,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
       <p className="text-sm font-medium">{label}</p>
       {payload.map((entry, i) => (
         <p key={i} className="text-sm" style={{ color: entry.color }}>
-          {formatCurrency(entry.value)}
+          {payload.length > 1 && entry.name ? `${entry.name}: ` : ''}{formatCurrency(entry.value)}
         </p>
       ))}
     </div>
@@ -68,6 +68,9 @@ export function Dashboard() {
   const [newDescription, setNewDescription] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
   const createProject = useCreateProject();
+
+  const [trendWindow, setTrendWindow] = useState<'ytd' | '6' | '12' | '24'>('12');
+  const [trendYoY, setTrendYoY] = useState(false);
 
   const handleCreateProject = async () => {
     if (!newName.trim()) return;
@@ -92,9 +95,15 @@ export function Dashboard() {
     currentDate.getMonth() + 1,
   );
 
+  const trendFetchMonths = trendYoY
+    ? 24
+    : trendWindow === 'ytd'
+    ? currentDate.getMonth() + 2
+    : parseInt(trendWindow);
+
   const { data: trend } = useQuery({
-    queryKey: ['reports', 'trend', 12],
-    queryFn: () => reportsApi.trend({ months: 12 }),
+    queryKey: ['reports', 'trend', trendFetchMonths],
+    queryFn: () => reportsApi.trend({ months: trendFetchMonths }),
   });
 
   // Guard against unexpected API responses (e.g. when backend URL is missing in production)
@@ -331,32 +340,119 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Spending Trend (Last 12 Months) */}
+      {/* Spending Trend */}
       {trendData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Spending Trend (12 Months)</CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg">Spending Trend</CardTitle>
+              <div className="flex items-center gap-2">
+                {/* Time frame selector */}
+                <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+                  {(['ytd', '6', '12', '24'] as const).map((w) => (
+                    <button
+                      key={w}
+                      onClick={() => setTrendWindow(w)}
+                      className={`px-2.5 py-1 transition-colors ${
+                        trendWindow === w
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background hover:bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {w === 'ytd' ? 'YTD' : `${w}M`}
+                    </button>
+                  ))}
+                </div>
+                {/* YoY toggle */}
+                <button
+                  onClick={() => setTrendYoY((v) => !v)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors ${
+                    trendYoY
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background hover:bg-muted text-muted-foreground border-border'
+                  }`}
+                >
+                  YoY
+                </button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={trendData.map((t: any) => ({
+            {trendYoY ? (() => {
+              // Group by year for multi-line YoY chart
+              const years = [...new Set(trendData.map((d: any) => Number(d.year)))].sort();
+              const currentMonth = currentDate.getMonth() + 1;
+              const monthsToShow = trendWindow === 'ytd'
+                ? Array.from({ length: currentMonth }, (_, i) => i + 1)
+                : Array.from({ length: 12 }, (_, i) => i + 1);
+              const YOY_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
+              const chartData = monthsToShow.map((mo) => {
+                const row: Record<string, string | number | null> = { month: monthNames[mo - 1] };
+                years.forEach((yr) => {
+                  const pt = trendData.find((d: any) => Number(d.year) === yr && Number(d.month) === mo);
+                  row[`y${yr}`] = pt != null ? (Number(pt.total) || 0) : null;
+                });
+                return row;
+              });
+              return (
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    {years.map((yr, i) => (
+                      <Line
+                        key={yr}
+                        type="monotone"
+                        dataKey={`y${yr}`}
+                        name={String(yr)}
+                        stroke={YOY_COLORS[i % YOY_COLORS.length]}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        connectNulls={false}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              );
+            })() : (() => {
+              // Single-line chart filtered to window
+              const currentYear = currentDate.getFullYear();
+              let filtered = trendData;
+              if (trendWindow === 'ytd') {
+                filtered = trendData.filter((d: any) => Number(d.year) === currentYear);
+              } else if (trendWindow === '6') {
+                const cutoff = new Date(currentDate);
+                cutoff.setMonth(cutoff.getMonth() - 6);
+                filtered = trendData.filter(
+                  (d: any) => new Date(Number(d.year), Number(d.month) - 1) > cutoff
+                );
+              }
+              const chartData = filtered.map((t: any) => ({
                 label: `${monthNames[Number(t.month) - 1]} ${String(t.year).slice(2)}`,
                 total: Number(t.total) || 0,
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: '#10b981' }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+              }));
+              return (
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: '#10b981' }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
@@ -380,9 +476,22 @@ export function Dashboard() {
                 return (
                   <div key={b.id}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">
-                        {b.project?.name || b.category?.name || 'Overall'}
-                        <span className="text-xs text-muted-foreground ml-1">({b.period})</span>
+                      <span className="text-sm font-medium flex flex-wrap items-center gap-1">
+                        {b.project && (
+                          <span className="flex items-center gap-1">
+                            <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: b.project.color }} />
+                            {b.project.name}
+                          </span>
+                        )}
+                        {b.project && b.category && <span className="text-muted-foreground">·</span>}
+                        {b.category && (
+                          <span className="flex items-center gap-1">
+                            <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: b.category.color }} />
+                            {b.category.name}
+                          </span>
+                        )}
+                        {!b.project && !b.category && <span className="text-muted-foreground italic">Overall</span>}
+                        <span className="text-xs text-muted-foreground font-normal">({b.period})</span>
                       </span>
                       <span className="text-sm">
                         {formatCurrency(b.actual)} / {formatCurrency(b.amount)}

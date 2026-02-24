@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useCategories, useCreateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { useTags, useCreateTag, useDeleteTag } from '@/hooks/useTags';
-import { useBudgets, useCreateBudget, useDeleteBudget } from '@/hooks/useBudgets';
+import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from '@/hooks/useBudgets';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useSavedLocations, useCreateSavedLocation, useDeleteSavedLocation } from '@/hooks/useSavedLocations';
 import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Tag, Target, MapPin } from 'lucide-react';
+import { Plus, Trash2, Tag, Target, MapPin, Pencil } from 'lucide-react';
 import { DEFAULT_CATEGORY_COLORS } from '@/lib/constants';
 import { formatCurrency } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -38,8 +45,10 @@ export function SettingsPage() {
   const { data: budgets } = useBudgets();
   const { data: projects } = useProjects();
   const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
   const [newBudget, setNewBudget] = useState({ projectId: '', categoryId: '', amount: '', period: 'monthly' });
+  const [editBudget, setEditBudget] = useState<{ id: string; amount: string; period: string } | null>(null);
 
   const { data: savedLocations } = useSavedLocations();
   const createSavedLocation = useCreateSavedLocation();
@@ -264,22 +273,55 @@ export function SettingsPage() {
           <div className="space-y-2">
             {budgets?.map((budget) => (
               <div key={budget.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-accent">
-                <div>
-                  <span className="text-sm font-medium">
-                    {budget.project?.name || budget.category?.name || 'Overall'}
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                    {budget.project && (
+                      <span className="flex items-center gap-1">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: budget.project.color }}
+                        />
+                        {budget.project.name}
+                      </span>
+                    )}
+                    {budget.project && budget.category && (
+                      <span className="text-muted-foreground">·</span>
+                    )}
+                    {budget.category && (
+                      <span className="flex items-center gap-1">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: budget.category.color }}
+                        />
+                        {budget.category.name}
+                      </span>
+                    )}
+                    {!budget.project && !budget.category && (
+                      <span className="text-muted-foreground italic">Overall</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
                     {formatCurrency(budget.amount)} / {budget.period}
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => setDeleteBudgetId(budget.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => setEditBudget({ id: budget.id, amount: String(budget.amount), period: budget.period })}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteBudgetId(budget.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
             {!budgets?.length && (
@@ -399,6 +441,56 @@ export function SettingsPage() {
         onConfirm={() => { deleteSavedLocation.mutate(deleteLocationId!); setDeleteLocationId(null); }}
         isPending={deleteSavedLocation.isPending}
       />
+
+      {/* Edit Budget Dialog */}
+      <Dialog open={!!editBudget} onOpenChange={(open) => !open && setEditBudget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Budget</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editBudget?.amount ?? ''}
+                onChange={(e) => setEditBudget((prev) => prev ? { ...prev, amount: e.target.value } : prev)}
+                placeholder="0.00"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label>Period</Label>
+              <Select
+                value={editBudget?.period ?? 'monthly'}
+                onValueChange={(v) => setEditBudget((prev) => prev ? { ...prev, period: v } : prev)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBudget(null)}>Cancel</Button>
+            <Button
+              disabled={!editBudget?.amount || updateBudget.isPending}
+              onClick={async () => {
+                if (!editBudget) return;
+                await updateBudget.mutateAsync({ id: editBudget.id, data: { amount: parseFloat(editBudget.amount), period: editBudget.period } });
+                setEditBudget(null);
+              }}
+            >
+              {updateBudget.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

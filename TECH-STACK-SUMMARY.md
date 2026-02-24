@@ -45,6 +45,7 @@ So: **browser → server → database / files / AI**. The server is the only pla
 - **Zustand** — Lightweight store for **UI state** (e.g. sidebar open/closed) that doesn’t need to live on the server.
 - **Axios** — Sends HTTP requests (GET, POST, etc.) from the browser to the server. All API calls go through one Axios instance that adds the **login token** to every request.
 - **Clerk (React)** — Handles **sign-in / sign-up** in the UI. Shows login screen when you’re not logged in; when you are, it gives the app a **token** to send to the server so the server knows who you are.
+- **Vercel Analytics** — `@vercel/analytics` with an `<Analytics />` component in the app; sends page views and visitor data to Vercel. View reports in the Vercel project dashboard under **Analytics**.
 
 ### 3.2 Backend (server)
 
@@ -102,12 +103,14 @@ UI components → call hooks → hooks use React Query → Axios sends request w
 
 - **`server/src/`**
   - **`app.ts`** — Builds the **Fastify** app: registers CORS, rate limit, **Prisma** plugin, **auth** plugin, then all **route modules** under `/api/v1`.
-  - **`plugins/auth.ts`** — **Runs on every request** (except `/api/v1/health**).  
+  - **`plugins/auth.ts`** — **Runs on every request** (except `/api/v1/health`).  
     - If **Clerk** is not configured (no `CLERK_SECRET_KEY`): in dev, it sets `request.userId = 'dev_user'` so you can test without logging in.  
     - If Clerk **is** configured: it reads `Authorization: Bearer <token>`, verifies the token with **Clerk**, and sets `request.userId` (and optionally email).  
     So **every protected route** has a known `userId`; the server never trusts the client to say who they are — it **always** checks the token.
-  - **`plugins/prisma.ts`** — Connects to PostgreSQL and attaches `fastify.prisma` so routes can do `fastify.prisma.expense.findMany(...)` etc.
-  - **`routes/`** — One file per “resource”: `expenses.ts`, `receipts.ts`, `projects.ts`, `mileage.ts`, `savedLocations.ts`, etc. Each route:
+  - **`plugins/prisma.ts`** — Connects to PostgreSQL **in the background** (does not block server startup). Attaches `fastify.prisma` so routes can do `fastify.prisma.expense.findMany(...)` etc. If the DB is unavailable, the server still listens; non-health API routes wait for the connection (with a timeout) or return **503**. So you never get “refused to connect” — you get a proper 503 and can see DB errors in logs.
+  - **`routes/health.ts`** — `GET /api/v1/health` returns `{ status, timestamp, database: "connected" | "disconnected" }` (no auth; does not wait for DB).
+  - **`routes/stats.ts`** — `GET /api/v1/stats` (auth required) returns aggregate counts: `{ users, projects, expenses }` for dashboards or monitoring.
+  - **`routes/`** — One file per “resource”: `expenses.ts`, `receipts.ts`, `projects.ts`, `mileage.ts`, `savedLocations.ts`, `stats.ts`, etc. Each route:
     - Uses **`request.userId`** in every database query (e.g. `where: { userId: request.userId }`) so users only see their own data.
   - **`services/ai/receiptProcessor.ts`** — Calls **Claude** with the receipt image/PDF and a prompt; parses the JSON response into vendor, amount, date, category, etc.
   - **`utils/receiptFingerprint.ts`** — Builds a short hash (e.g. from vendor + amount + date) for **duplicate receipt detection**.
@@ -132,7 +135,7 @@ Request comes in → **auth** plugin sets `request.userId` (or returns 401) → 
   - `userId` comes from **auth** (Clerk or dev_user); the server never uses a user ID from the URL or body for file paths.
   - Filename is a **random UUID** so it’s unique and not guessable.
 
-So: **metadata and security-sensitive fields in DB; file bytes on disk (per user).**
+So: **metadata and security-sensitive fields in DB; file bytes on disk (per user).** A single **Expense** can have **multiple Receipts** attached (`Receipt.expenseId`; `Expense.receipts`). After a batch upload, the user can choose “one expense per receipt” (review each and accept separately) or “one expense for all” (`POST /api/v1/receipts/accept-batch`). You can also attach a pending receipt to an existing expense with `POST /api/v1/expenses/:id/receipts` and `{ receiptId }`.
 
 ### 5.2 How upload works
 
@@ -248,6 +251,9 @@ So: **receipts and login-related data are kept secure by (1) not storing passwor
 | API client + auth token | `client/src/services/api.ts` |
 | Server entry, CORS, auth, routes | `server/src/app.ts` |
 | Auth: verify JWT, set userId | `server/src/plugins/auth.ts` |
+| DB connection (deferred), health skip | `server/src/plugins/prisma.ts` |
+| Health + DB status | `server/src/routes/health.ts` |
+| Stats (users, projects, expenses) | `server/src/routes/stats.ts` |
 | Receipt upload, storage, file serve, process | `server/src/routes/receipts.ts` |
 | AI receipt parsing (Claude) | `server/src/services/ai/receiptProcessor.ts` |
 | Duplicate receipt fingerprint | `server/src/utils/receiptFingerprint.ts` |

@@ -27,6 +27,7 @@ export function useCreateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast.success('Expense added');
     },
     onError: () => toast.error('Failed to add expense'),
@@ -42,6 +43,7 @@ export function useUpdateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast.success('Expense updated');
     },
     onError: () => toast.error('Failed to update expense'),
@@ -56,6 +58,7 @@ export function useDeleteExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast.success('Expense deleted');
     },
     onError: () => toast.error('Failed to delete expense'),
@@ -83,6 +86,7 @@ export function useBulkCategorize() {
       expensesApi.bulkCategorize(ids, categoryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast.success('Category applied');
     },
     onError: () => toast.error('Failed to categorize expenses'),

@@ -69,7 +69,7 @@ const budgetRoutes: FastifyPluginAsync = async (fastify) => {
           actual,
           remaining: budgetAmount - actual,
           percentage: Math.round(percentage * 10) / 10,
-          status: percentage >= 100 ? 'over' : percentage >= 80 ? 'warning' : 'ok',
+          status: actual > budgetAmount ? 'over' : percentage >= 80 ? 'warning' : 'ok',
         };
       })
     );

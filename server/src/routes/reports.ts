@@ -409,8 +409,6 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { date: 'asc' },
     });
 
-    }));
-
     const disclaimerRow: Record<string, string> = {
       Date: '',
       Vendor: '',
@@ -427,24 +425,23 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       'Tax Schedule': '',
       Notes: '',
     };
-    const dataRows = expenses.map((e) => ({
+    const dataRows: Record<string, string>[] = expenses.map((e): Record<string, string> => ({
       Date: e.date.toISOString().split('T')[0],
       Vendor: e.vendor,
       Description: e.description,
       Amount: Number(e.amount).toFixed(2),
       Project: e.project.name,
-      Category: e.category?.name || '',
-      'Payment Method': e.paymentMethod || '',
-      Purchaser: e.purchaser || '',
+      Category: e.category?.name ?? '',
+      'Payment Method': e.paymentMethod ?? '',
+      Purchaser: e.purchaser ?? '',
       Reimbursable: e.isReimbursable ? 'Yes' : 'No',
-      'Reimbursement Status': e.reimbursementStatus || '',
+      'Reimbursement Status': e.reimbursementStatus ?? '',
       'Tax Deductible': e.isDeductible ? 'Yes' : 'No',
-      'Tax Category': e.taxCategory?.name || '',
-      'Tax Schedule': e.taxCategory?.schedule || '',
-      Notes: e.notes || '',
+      'Tax Category': e.taxCategory?.name ?? '',
+      'Tax Schedule': e.taxCategory?.schedule ?? '',
+      Notes: e.notes ?? '',
     }));
-
-    const rows = [disclaimerRow, ...dataRows];
+    const rows: Record<string, string>[] = [disclaimerRow, ...dataRows];
     const csv = stringify(rows, { header: true });
 
     const filename = month

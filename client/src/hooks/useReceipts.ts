@@ -70,6 +70,7 @@ export function useAcceptReceipt() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['receipts', 'pending'] });
       toast.success('Expense saved from receipt');
     },
@@ -86,6 +87,7 @@ export function useAcceptBatchReceipts() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['receipts', 'pending'] });
       toast.success('Expense created with all receipts attached');
     },

@@ -29,6 +29,19 @@ export function useCreateBudget() {
   });
 }
 
+export function useUpdateBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<{ amount: number; period: string }> }) =>
+      budgetsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      toast.success('Budget updated');
+    },
+    onError: () => toast.error('Failed to update budget'),
+  });
+}
+
 export function useDeleteBudget() {
   const queryClient = useQueryClient();
   return useMutation({
