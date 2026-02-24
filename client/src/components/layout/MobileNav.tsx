@@ -1,18 +1,15 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Receipt, Upload, BarChart3, Menu } from 'lucide-react';
+import { LayoutDashboard, Upload, BarChart3, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/uiStore';
 
 const mobileNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
-  { to: '/expenses', icon: Receipt, label: 'Expenses' },
-  { to: '/scan', icon: Upload, label: 'Upload', isCenter: true },
+  { to: '/scan', icon: Upload, label: 'Scan', isCenter: true },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function MobileNav() {
-  const { toggleSidebar } = useUIStore();
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background lg:hidden">
       <div className="flex items-center justify-around">
@@ -24,9 +21,7 @@ export function MobileNav() {
               cn(
                 'flex flex-col items-center gap-1 px-3 py-2 text-xs font-medium transition-colors',
                 item.isCenter && 'relative -top-3',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground'
+                isActive ? 'text-primary' : 'text-muted-foreground'
               )
             }
             end={item.to === '/'}
@@ -41,13 +36,6 @@ export function MobileNav() {
             <span>{item.label}</span>
           </NavLink>
         ))}
-        <button
-          onClick={toggleSidebar}
-          className="flex flex-col items-center gap-1 px-3 py-2 text-xs font-medium text-muted-foreground"
-        >
-          <Menu className="h-5 w-5" />
-          <span>More</span>
-        </button>
       </div>
     </nav>
   );
