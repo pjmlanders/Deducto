@@ -1,42 +1,87 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useUploadReceipt, useCaptureReceipt, useProcessReceipt } from '@/hooks/useReceipts';
+import { useUploadReceipt, useCaptureReceipt, useProcessReceipt, useAcceptReceipt } from '@/hooks/useReceipts';
 import { useProjects } from '@/hooks/useProjects';
-import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Camera, Upload, Loader2, FileText, CheckCircle2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { receiptsApi } from '@/services/api';
+import { formatDateInput } from '@/lib/utils';
+import type { Receipt } from '@/types';
 
-interface UploadResult {
+interface BatchResult {
   fileName: string;
-  status: 'uploading' | 'processing' | 'done' | 'error';
-  receiptId?: string;
+  status: 'uploading' | 'analyzing' | 'creating' | 'done' | 'error';
   error?: string;
+}
+
+// Poll until receipt processing finishes (max 60s)
+async function pollReceiptStatus(receiptId: string): Promise<Receipt> {
+  for (let i = 0; i < 30; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const receipt = await receiptsApi.getStatus(receiptId);
+    if (receipt.processingStatus !== 'processing' && receipt.processingStatus !== 'pending') {
+      return receipt;
+    }
+  }
+  throw new Error('Processing timed out');
+}
+
+function buildExpenseData(receipt: Receipt, projectId: string) {
+  let description = '';
+  if (receipt.extractedItems) {
+    try {
+      const items = JSON.parse(receipt.extractedItems);
+      description = items.map((i: { description?: string }) => i.description).filter(Boolean).join(', ');
+    } catch {
+      description = receipt.extractedItems;
+    }
+  }
+  return {
+    projectId,
+    vendor: receipt.extractedVendor || 'Unknown Vendor',
+    description: description || receipt.extractedVendor || 'Receipt scan',
+    amount: receipt.extractedAmount ? Number(receipt.extractedAmount) : 0,
+    date: receipt.extractedDate
+      ? formatDateInput(receipt.extractedDate)
+      : formatDateInput(new Date()),
+  };
 }
 
 export function ReceiptCapture() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const projectId = searchParams.get('projectId');
+  const urlProjectId = searchParams.get('projectId');
   const { data: projects } = useProjects();
-  const projectName = projectId ? projects?.data?.find((p) => p.id === projectId)?.name : null;
+  const projectName = urlProjectId
+    ? projects?.data?.find((p) => p.id === urlProjectId)?.name
+    : null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [mode, setMode] = useState<'select' | 'camera' | 'preview' | 'batch'>('select');
+  const [mode, setMode] = useState<'select' | 'camera' | 'preview' | 'batch' | 'working'>('select');
+  const [workingStep, setWorkingStep] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [batchUploads, setBatchUploads] = useState<UploadResult[]>([]);
-
-  const pq = projectId ? `?projectId=${projectId}` : '';
+  const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(urlProjectId || '');
 
   const uploadReceipt = useUploadReceipt();
   const captureReceipt = useCaptureReceipt();
   const processReceipt = useProcessReceipt();
-  const queryClient = useQueryClient();
+  const acceptReceipt = useAcceptReceipt();
 
   const startCamera = useCallback(async () => {
     try {
@@ -65,110 +110,136 @@ export function ReceiptCapture() {
 
   const takePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
-
     const video = videoRef.current;
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      setCapturedImage(dataUrl);
+      setCapturedImage(canvas.toDataURL('image/jpeg', 0.85));
       setMode('preview');
       stopCamera();
     }
   }, [stopCamera]);
 
-  // Batch upload — process multiple files
+  const doSingleFile = async (file: File) => {
+    if (!selectedProjectId) {
+      toast.error('Please select a project first');
+      return;
+    }
+    setMode('working');
+    try {
+      setWorkingStep('Uploading receipt...');
+      const receipt = await uploadReceipt.mutateAsync(file);
+
+      setWorkingStep('Starting AI analysis...');
+      await processReceipt.mutateAsync(receipt.id);
+
+      setWorkingStep('Analyzing receipt with AI...');
+      const processed = await pollReceiptStatus(receipt.id);
+
+      setWorkingStep('Creating expense...');
+      await acceptReceipt.mutateAsync({
+        receiptId: processed.id,
+        ...buildExpenseData(processed, selectedProjectId),
+      });
+
+      navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
+    } catch {
+      toast.error('Failed to process receipt. Please try again.');
+      setMode('select');
+    }
+  };
+
+  const handleCapturedSubmit = async () => {
+    if (!capturedImage || !selectedProjectId) return;
+    setMode('working');
+    try {
+      setWorkingStep('Uploading photo...');
+      const receipt = await captureReceipt.mutateAsync({ image: capturedImage });
+
+      setWorkingStep('Starting AI analysis...');
+      await processReceipt.mutateAsync(receipt.id);
+
+      setWorkingStep('Analyzing receipt with AI...');
+      const processed = await pollReceiptStatus(receipt.id);
+
+      setWorkingStep('Creating expense...');
+      await acceptReceipt.mutateAsync({
+        receiptId: processed.id,
+        ...buildExpenseData(processed, selectedProjectId),
+      });
+
+      navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
+    } catch {
+      toast.error('Failed to process receipt. Please try again.');
+      setCapturedImage(null);
+      setMode('select');
+    }
+  };
+
   const handleBatchUpload = async (files: File[]) => {
+    if (!selectedProjectId) {
+      toast.error('Please select a project first');
+      return;
+    }
     const validFiles = files.filter((f) =>
       ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'].includes(f.type)
     );
-
     if (validFiles.length === 0) {
       toast.error('No valid receipt files found. Accepted: JPEG, PNG, WebP, HEIC, PDF');
       return;
     }
-
-    // For single file, go straight to review
     if (validFiles.length === 1) {
-      try {
-        const receipt = await uploadReceipt.mutateAsync(validFiles[0]);
-        await processReceipt.mutateAsync(receipt.id);
-        navigate(`/receipts${pq}`);
-      } catch {
-        toast.error('Failed to upload receipt. Please try again.');
-      }
+      await doSingleFile(validFiles[0]);
       return;
     }
 
-    // Multiple files — show batch progress
     setMode('batch');
-    const results: UploadResult[] = validFiles.map((f) => ({
-      fileName: f.name,
-      status: 'uploading' as const,
-    }));
-    setBatchUploads([...results]);
+    const results: BatchResult[] = validFiles.map((f) => ({ fileName: f.name, status: 'uploading' }));
+    setBatchResults([...results]);
 
     for (let i = 0; i < validFiles.length; i++) {
       try {
         results[i].status = 'uploading';
-        setBatchUploads([...results]);
-
+        setBatchResults([...results]);
         const receipt = await uploadReceipt.mutateAsync(validFiles[i]);
-        results[i].receiptId = receipt.id;
-        results[i].status = 'processing';
-        setBatchUploads([...results]);
 
+        results[i].status = 'analyzing';
+        setBatchResults([...results]);
         await processReceipt.mutateAsync(receipt.id);
+        const processed = await pollReceiptStatus(receipt.id);
+
+        results[i].status = 'creating';
+        setBatchResults([...results]);
+        await acceptReceipt.mutateAsync({
+          receiptId: processed.id,
+          ...buildExpenseData(processed, selectedProjectId),
+        });
+
         results[i].status = 'done';
-        setBatchUploads([...results]);
+        setBatchResults([...results]);
       } catch {
         results[i].status = 'error';
-        results[i].error = 'Upload failed';
-        setBatchUploads([...results]);
+        results[i].error = 'Failed';
+        setBatchResults([...results]);
       }
     }
 
-    queryClient.invalidateQueries({ queryKey: ['receipts', 'pending'] });
+    const successCount = results.filter((r) => r.status === 'done').length;
+    toast.success(`Created ${successCount} expense${successCount !== 1 ? 's' : ''} from receipts`);
+    navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
   };
 
-  const handleCapturedSubmit = async () => {
-    if (!capturedImage) return;
-
-    try {
-      const receipt = await captureReceipt.mutateAsync({ image: capturedImage });
-      await processReceipt.mutateAsync(receipt.id);
-      navigate(`/receipts${pq}`);
-    } catch {
-      toast.error('Failed to process receipt. Please try again.');
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleBatchUpload(files);
-    }
+    if (files.length > 0) handleBatchUpload(files);
   };
-
-  const isProcessing = uploadReceipt.isPending || captureReceipt.isPending || processReceipt.isPending;
-  const batchDone = batchUploads.length > 0 && batchUploads.every((u) => u.status === 'done' || u.status === 'error');
-  const batchSuccessCount = batchUploads.filter((u) => u.status === 'done').length;
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -179,25 +250,46 @@ export function ReceiptCapture() {
         </p>
       )}
 
+      {/* Project selector — shown when not coming from a project */}
+      {!urlProjectId && (mode === 'select' || mode === 'preview') && (
+        <div>
+          <Label>Project *</Label>
+          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a project" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects?.data?.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Select mode */}
       {mode === 'select' && (
         <div className="space-y-4">
-          {/* Drag and drop zone */}
           <Card
-            className={`border-2 border-dashed transition-colors cursor-pointer ${
-              dragOver
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-primary/50'
+            className={`border-2 border-dashed transition-colors ${
+              !selectedProjectId
+                ? 'opacity-50 cursor-not-allowed'
+                : dragOver
+                ? 'border-primary bg-primary/5 cursor-pointer'
+                : 'border-muted-foreground/25 hover:border-primary/50 cursor-pointer'
             }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onDragOver={selectedProjectId ? handleDragOver : undefined}
+            onDragLeave={selectedProjectId ? handleDragLeave : undefined}
+            onDrop={selectedProjectId ? handleDrop : undefined}
+            onClick={() => selectedProjectId && fileInputRef.current?.click()}
           >
             <CardContent className="flex flex-col items-center py-10">
               <Upload className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold">Drop files here or click to browse</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Upload one or multiple receipts (JPEG, PNG, PDF)
+                {selectedProjectId
+                  ? 'Upload one or multiple receipts (JPEG, PNG, PDF)'
+                  : 'Select a project above first'}
               </p>
             </CardContent>
           </Card>
@@ -210,23 +302,22 @@ export function ReceiptCapture() {
             className="hidden"
             onChange={(e) => {
               const files = Array.from(e.target.files || []);
-              if (files.length > 0) {
-                handleBatchUpload(files);
-              }
+              if (files.length > 0) handleBatchUpload(files);
               e.target.value = '';
             }}
           />
 
           <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">or</span>
             </div>
           </div>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={startCamera}>
+          <Card
+            className={`transition-shadow ${selectedProjectId ? 'cursor-pointer hover:shadow-md' : 'opacity-50 cursor-not-allowed'}`}
+            onClick={() => selectedProjectId && startCamera()}
+          >
             <CardContent className="flex items-center gap-4 py-4">
               <Camera className="h-8 w-8 text-primary" />
               <div>
@@ -235,81 +326,49 @@ export function ReceiptCapture() {
               </div>
             </CardContent>
           </Card>
-
-          {isProcessing && (
-            <div className="flex items-center justify-center gap-2 py-4">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Processing receipt...</span>
-            </div>
-          )}
         </div>
       )}
 
+      {/* Working — single file progress */}
+      {mode === 'working' && (
+        <Card>
+          <CardContent className="flex flex-col items-center py-16 gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm font-medium">{workingStep}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Batch progress */}
       {mode === 'batch' && (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="py-4 space-y-3">
-              {batchUploads.map((upload, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  {upload.status === 'done' ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                  ) : upload.status === 'error' ? (
-                    <span className="h-5 w-5 text-red-600 shrink-0 text-center font-bold">!</span>
-                  ) : (
-                    <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{upload.fileName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {upload.status === 'uploading' && 'Uploading...'}
-                      {upload.status === 'processing' && 'AI processing...'}
-                      {upload.status === 'done' && 'Ready for review'}
-                      {upload.status === 'error' && (upload.error || 'Failed')}
-                    </p>
-                  </div>
+        <Card>
+          <CardContent className="py-4 space-y-3">
+            {batchResults.map((r, i) => (
+              <div key={i} className="flex items-center gap-3">
+                {r.status === 'done' ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                ) : r.status === 'error' ? (
+                  <span className="h-5 w-5 text-red-500 shrink-0 text-center font-bold leading-5">!</span>
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{r.fileName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.status === 'uploading' && 'Uploading...'}
+                    {r.status === 'analyzing' && 'Analyzing with AI...'}
+                    {r.status === 'creating' && 'Creating expense...'}
+                    {r.status === 'done' && 'Expense created'}
+                    {r.status === 'error' && (r.error || 'Failed')}
+                  </p>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {batchDone && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">How do you want to use these receipts?</p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => { setBatchUploads([]); setMode('select'); }}
-                >
-                  Upload More
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => navigate(`/receipts${pq}`)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  One expense per receipt ({batchSuccessCount} expenses)
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    const ids = batchUploads.filter((u) => u.status === 'done' && u.receiptId).map((u) => u.receiptId!);
-                    const q = new URLSearchParams();
-                    q.set('ids', ids.join(','));
-                    if (projectId) q.set('projectId', projectId);
-                    navigate(`/receipts/batch-accept?${q.toString()}`);
-                  }}
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  One expense for all ({batchSuccessCount} receipts)
-                </Button>
               </div>
-            </div>
-          )}
-        </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
+      {/* Camera */}
       {mode === 'camera' && (
         <div className="space-y-4">
           <div className="relative rounded-lg overflow-hidden bg-black aspect-[3/4]">
@@ -322,13 +381,13 @@ export function ReceiptCapture() {
               Cancel
             </Button>
             <Button className="flex-1" onClick={takePhoto}>
-              <Camera className="h-4 w-4 mr-2" />
-              Capture
+              <Camera className="h-4 w-4 mr-2" /> Capture
             </Button>
           </div>
         </div>
       )}
 
+      {/* Preview captured photo */}
       {mode === 'preview' && capturedImage && (
         <div className="space-y-4">
           <div className="rounded-lg overflow-hidden">
@@ -338,18 +397,8 @@ export function ReceiptCapture() {
             <Button variant="outline" className="flex-1" onClick={() => { setCapturedImage(null); setMode('select'); }}>
               Retake
             </Button>
-            <Button className="flex-1" onClick={handleCapturedSubmit} disabled={isProcessing}>
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Process Receipt
-                </>
-              )}
+            <Button className="flex-1" onClick={handleCapturedSubmit} disabled={!selectedProjectId}>
+              <Upload className="h-4 w-4 mr-2" /> Process Receipt
             </Button>
           </div>
         </div>

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { useTags } from '@/hooks/useTags';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Plus, Search, Receipt, Trash2, ChevronLeft, ChevronRight, Filter, CheckSquare, Square, X } from 'lucide-react';
+import { Plus, Search, Receipt, Trash2, ChevronLeft, ChevronRight, Filter, CheckSquare, Square, X, AlertTriangle } from 'lucide-react';
 import { REIMBURSEMENT_STATUSES } from '@/lib/constants';
 import type { ExpenseFilters } from '@/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -320,7 +320,12 @@ export function ExpenseList() {
                         <Receipt className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{expense.vendor}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-sm truncate">{expense.vendor}</p>
+                          {expense.source === 'receipt_scan' && (Number(expense.amount) === 0 || expense.vendor === 'Unknown Vendor') && (
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground truncate">{expense.description}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">{formatDate(expense.date)}</span>
