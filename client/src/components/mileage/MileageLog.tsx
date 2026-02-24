@@ -18,6 +18,7 @@ import { Car, Plus, Trash2, MapPin, X, Route, Loader2, Bookmark } from 'lucide-r
 import { formatCurrency, formatDate, formatDateInput } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
+import { RouteMap } from './RouteMap';
 
 const IRS_RATE = 0.70;
 
@@ -30,13 +31,23 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
-async function calculateRoute(start: { lat: number; lng: number }, end: { lat: number; lng: number }): Promise<number | null> {
-  const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=false`;
+interface RouteResult {
+  miles: number;
+  routeCoords: [number, number][];
+}
+
+async function calculateRoute(start: { lat: number; lng: number }, end: { lat: number; lng: number }): Promise<RouteResult | null> {
+  const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const data = await res.json();
   if (data.code !== 'Ok' || !data.routes?.length) return null;
-  return Math.round(data.routes[0].distance * 0.000621371 * 10) / 10;
+  const miles = Math.round(data.routes[0].distance * 0.000621371 * 10) / 10;
+  // OSRM returns [lng, lat]; Leaflet expects [lat, lng]
+  const routeCoords: [number, number][] = data.routes[0].geometry.coordinates.map(
+    ([lng, lat]: [number, number]) => [lat, lng]
+  );
+  return { miles, routeCoords };
 }
 
 export function MileageLog() {
@@ -47,6 +58,11 @@ export function MileageLog() {
   const [distanceMode, setDistanceMode] = useState<'enter' | 'calculate'>('enter');
   const [routeCalculating, setRouteCalculating] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [routeMap, setRouteMap] = useState<{
+    startCoords: { lat: number; lng: number };
+    endCoords: { lat: number; lng: number };
+    routeCoords: [number, number][];
+  } | null>(null);
 
   const { data: entries, isLoading } = useMileage(year);
   const { data: summary } = useMileageSummary(year);
@@ -72,6 +88,7 @@ export function MileageLog() {
     if (!form.startLocation || !form.endLocation) return;
     setRouteCalculating(true);
     setRouteError(null);
+    setRouteMap(null);
     try {
       const [startCoords, endCoords] = await Promise.all([
         geocodeAddress(form.startLocation),
@@ -85,12 +102,13 @@ export function MileageLog() {
         setRouteError('Could not find end address. Try a more specific address.');
         return;
       }
-      const miles = await calculateRoute(startCoords, endCoords);
-      if (miles === null) {
+      const result = await calculateRoute(startCoords, endCoords);
+      if (result === null) {
         setRouteError('Route calculation failed. Please enter distance manually.');
         return;
       }
-      setForm((f) => ({ ...f, distance: String(miles) }));
+      setForm((f) => ({ ...f, distance: String(result.miles) }));
+      setRouteMap({ startCoords, endCoords, routeCoords: result.routeCoords });
     } catch {
       setRouteError('Route calculation failed. Please enter distance manually.');
     } finally {
@@ -121,6 +139,7 @@ export function MileageLog() {
       notes: '',
     });
     setRouteError(null);
+    setRouteMap(null);
     setShowForm(false);
   };
 
@@ -190,7 +209,7 @@ export function MileageLog() {
                 <button
                   type="button"
                   className={`px-3 py-1.5 transition-colors ${distanceMode === 'enter' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                  onClick={() => { setDistanceMode('enter'); setRouteError(null); }}
+                  onClick={() => { setDistanceMode('enter'); setRouteError(null); setRouteMap(null); }}
                 >
                   Enter Distance
                 </button>
@@ -283,7 +302,7 @@ export function MileageLog() {
 
               {/* Calculate button (only in calculate mode) */}
               {distanceMode === 'calculate' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Button
                     type="button"
                     variant="outline"
@@ -301,8 +320,15 @@ export function MileageLog() {
                   )}
                   {form.distance && !routeError && (
                     <p className="text-sm text-green-600">
-                      Route: {form.distance} miles one-way — you can edit the distance above if needed.
+                      Route: {form.distance} miles one-way — you can edit the distance below if needed.
                     </p>
+                  )}
+                  {routeMap && (
+                    <RouteMap
+                      startCoords={routeMap.startCoords}
+                      endCoords={routeMap.endCoords}
+                      routeCoords={routeMap.routeCoords}
+                    />
                   )}
                 </div>
               )}
