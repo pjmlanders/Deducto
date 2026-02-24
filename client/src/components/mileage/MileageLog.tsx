@@ -21,7 +21,17 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { RouteMap } from './RouteMap';
 
-const IRS_RATE = 0.70;
+const IRS_RATES: Record<number, number> = {
+  2024: 0.67,
+  2025: 0.70,
+  2026: 0.725,
+};
+
+function getIrsRate(year: number): number {
+  if (IRS_RATES[year]) return IRS_RATES[year];
+  const latestYear = Math.max(...Object.keys(IRS_RATES).map(Number));
+  return IRS_RATES[latestYear];
+}
 
 async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
@@ -185,7 +195,7 @@ export function MileageLog() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalDeduction || 0)}</div>
-            <p className="text-xs text-muted-foreground">at ${IRS_RATE}/mile (2025 IRS rate)</p>
+            <p className="text-xs text-muted-foreground">at ${summary?.rateUsed ?? getIrsRate(year)}/mile ({year} IRS rate)</p>
           </CardContent>
         </Card>
         <Card>
@@ -370,7 +380,7 @@ export function MileageLog() {
                 {form.distance && (
                   <span className="text-sm text-muted-foreground">
                     = {(parseFloat(form.distance) * (form.roundTrip ? 2 : 1)).toFixed(1)} miles
-                    ({formatCurrency(parseFloat(form.distance) * (form.roundTrip ? 2 : 1) * IRS_RATE)} deduction)
+                    ({formatCurrency(parseFloat(form.distance) * (form.roundTrip ? 2 : 1) * getIrsRate(form.date ? new Date(form.date).getFullYear() : currentYear))} deduction)
                   </span>
                 )}
               </div>

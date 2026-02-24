@@ -1,6 +1,18 @@
 import { FastifyPluginAsync } from 'fastify';
 
-const IRS_MILEAGE_RATE_2025 = 0.70;
+// IRS standard business mileage rates by year
+const IRS_MILEAGE_RATES: Record<number, number> = {
+  2024: 0.67,
+  2025: 0.70,
+  2026: 0.725,
+};
+
+function getIrsRate(year: number): number {
+  if (IRS_MILEAGE_RATES[year]) return IRS_MILEAGE_RATES[year];
+  // For future years not yet in the table, use the most recent known rate
+  const latestYear = Math.max(...Object.keys(IRS_MILEAGE_RATES).map(Number));
+  return IRS_MILEAGE_RATES[latestYear];
+}
 
 const mileageRoutes: FastifyPluginAsync = async (fastify) => {
   // List mileage entries
@@ -84,7 +96,8 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const actualDistance = roundTrip ? distance * 2 : distance;
-    const rateUsed = IRS_MILEAGE_RATE_2025;
+    const entryYear = new Date(date).getFullYear();
+    const rateUsed = getIrsRate(entryYear);
     const deduction = actualDistance * rateUsed;
 
     const entry = await fastify.prisma.mileageEntry.create({
@@ -141,14 +154,17 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     const actualDistance = (distance != null || roundTrip != null)
       ? (newRoundTrip ? baseDistance * 2 : baseDistance)
       : undefined;
+    // If the date is changing, recalculate rateUsed for the new year
+    const entryYear = date ? new Date(date).getFullYear() : existing.date.getFullYear();
+    const newRateUsed = date ? getIrsRate(entryYear) : Number(existing.rateUsed);
     const deduction = actualDistance != null
-      ? actualDistance * Number(existing.rateUsed)
-      : undefined;
+      ? actualDistance * newRateUsed
+      : (date ? Number(existing.distance) * newRateUsed : undefined);
 
     const entry = await fastify.prisma.mileageEntry.update({
       where: { id: existing.id },
       data: {
-        ...(date && { date: new Date(date) }),
+        ...(date && { date: new Date(date), rateUsed: newRateUsed }),
         ...(startLocation && { startLocation }),
         ...(endLocation && { endLocation }),
         ...(actualDistance != null && { distance: actualDistance }),
@@ -205,7 +221,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
       totalMiles: result._sum.distance || 0,
       totalDeduction: result._sum.deduction || 0,
       tripCount: result._count,
-      rateUsed: IRS_MILEAGE_RATE_2025,
+      rateUsed: getIrsRate(year),
     };
   });
 };
