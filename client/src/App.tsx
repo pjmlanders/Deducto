@@ -9,7 +9,6 @@ import { ProjectList } from '@/components/projects/ProjectList';
 import { ProjectDetail } from '@/components/projects/ProjectDetail';
 import { ReceiptCapture } from '@/components/receipts/ReceiptCapture';
 import { ReceiptList } from '@/components/receipts/ReceiptList';
-import { ReceiptProcessing } from '@/components/receipts/ReceiptProcessing';
 import { BatchAcceptReceipts } from '@/components/receipts/BatchAcceptReceipts';
 import { DepositList } from '@/components/deposits/DepositList';
 import { ReportsPage } from '@/components/reports/ReportsPage';
@@ -30,7 +29,6 @@ export default function App() {
           <Route path="/upload" element={<ReceiptCapture />} />
           <Route path="/receipts" element={<ReceiptList />} />
           <Route path="/receipts/batch-accept" element={<BatchAcceptReceipts />} />
-          <Route path="/receipts/:id/review" element={<ReceiptProcessing />} />
           <Route path="/projects" element={<ProjectList />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/deposits" element={<DepositList />} />

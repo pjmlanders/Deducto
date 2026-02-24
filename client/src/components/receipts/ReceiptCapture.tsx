@@ -97,7 +97,7 @@ export function ReceiptCapture() {
       try {
         const receipt = await uploadReceipt.mutateAsync(validFiles[0]);
         await processReceipt.mutateAsync(receipt.id);
-        navigate(`/receipts/${receipt.id}/review${pq}`);
+        navigate(`/receipts${pq}`);
       } catch {
         toast.error('Failed to upload receipt. Please try again.');
       }
@@ -141,7 +141,7 @@ export function ReceiptCapture() {
     try {
       const receipt = await captureReceipt.mutateAsync({ image: capturedImage });
       await processReceipt.mutateAsync(receipt.id);
-      navigate(`/receipts/${receipt.id}/review${pq}`);
+      navigate(`/receipts${pq}`);
     } catch {
       toast.error('Failed to process receipt. Please try again.');
     }

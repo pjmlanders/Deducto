@@ -7,6 +7,13 @@ export function usePendingReceipts() {
   return useQuery({
     queryKey: ['receipts', 'pending'],
     queryFn: () => receiptsApi.list({ status: 'pending' }),
+    refetchInterval: (query) => {
+      const receipts = query.state.data;
+      const hasInFlight = receipts?.some(
+        (r) => r.processingStatus === 'processing' || r.processingStatus === 'pending'
+      );
+      return hasInFlight ? 3000 : false;
+    },
   });
 }
 
