@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
+import { TAX_DISCLAIMER } from '@/lib/constants';
 import { BarChart3, Download, FileText, TrendingDown, TrendingUp } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -84,6 +85,7 @@ export function ReportsPage() {
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Reports</h1>
           <p className="text-sm text-muted-foreground">Financial summaries and tax reports</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xl">{TAX_DISCLAIMER}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0 flex-wrap">
           <Button

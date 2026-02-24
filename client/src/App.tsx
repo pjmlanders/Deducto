@@ -14,6 +14,9 @@ import { DepositList } from '@/components/deposits/DepositList';
 import { ReportsPage } from '@/components/reports/ReportsPage';
 import { MileageLog } from '@/components/mileage/MileageLog';
 import { SettingsPage } from '@/components/settings/SettingsPage';
+import { PrivacyPage } from '@/components/legal/PrivacyPage';
+import { TermsPage } from '@/components/legal/TermsPage';
+import { SecurityPage } from '@/components/legal/SecurityPage';
 
 export default function App() {
   return (
@@ -35,6 +38,9 @@ export default function App() {
           <Route path="/mileage" element={<MileageLog />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/security" element={<SecurityPage />} />
         </Route>
       </Routes>
       <Analytics />

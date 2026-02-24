@@ -6,8 +6,6 @@ import {
   PiggyBank,
   BarChart3,
   Settings,
-  Upload,
-  FileSearch,
   Car,
   X,
 } from 'lucide-react';
@@ -21,11 +19,6 @@ const mainNavItems = [
   { to: '/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/deposits', icon: PiggyBank, label: 'Deposits' },
   { to: '/mileage', icon: Car, label: 'Mileage' },
-];
-
-const toolNavItems = [
-  { to: '/scan', icon: Upload, label: 'Upload Receipts' },
-  { to: '/receipts', icon: FileSearch, label: 'Review Receipts' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
 ];
 
@@ -95,16 +88,6 @@ export function Sidebar() {
             ))}
           </div>
 
-          <div className="my-4 h-px bg-border" />
-
-          <p className="px-3 mb-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-            Tools
-          </p>
-          <div className="space-y-1">
-            {toolNavItems.map((item) => (
-              <SidebarLink key={item.to} item={item} onClick={closeSidebar} />
-            ))}
-          </div>
         </nav>
 
         <div className="border-t px-3 py-3">

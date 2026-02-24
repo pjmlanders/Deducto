@@ -4,6 +4,8 @@ import { stringify } from 'csv-stringify/sync';
 import PDFDocument from 'pdfkit';
 
 const reportRoutes: FastifyPluginAsync = async (fastify) => {
+  const EXPORT_DISCLAIMER =
+    'Deducto is not a tax advisor. This export is for your records only. Consult a qualified tax professional for advice.';
   // Monthly summary
   fastify.get('/reports/monthly', async (request) => {
     const query = request.query as Record<string, string>;
@@ -407,7 +409,25 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { date: 'asc' },
     });
 
-    const rows = expenses.map((e) => ({
+    }));
+
+    const disclaimerRow: Record<string, string> = {
+      Date: '',
+      Vendor: '',
+      Description: EXPORT_DISCLAIMER,
+      Amount: '',
+      Project: '',
+      Category: '',
+      'Payment Method': '',
+      Purchaser: '',
+      Reimbursable: '',
+      'Reimbursement Status': '',
+      'Tax Deductible': '',
+      'Tax Category': '',
+      'Tax Schedule': '',
+      Notes: '',
+    };
+    const dataRows = expenses.map((e) => ({
       Date: e.date.toISOString().split('T')[0],
       Vendor: e.vendor,
       Description: e.description,
@@ -424,6 +444,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       Notes: e.notes || '',
     }));
 
+    const rows = [disclaimerRow, ...dataRows];
     const csv = stringify(rows, { header: true });
 
     const filename = month
@@ -499,6 +520,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     // Header
     doc.fontSize(20).text('Expense Report', { align: 'center' });
     doc.fontSize(12).text(periodLabel, { align: 'center' });
+    doc.fontSize(8).text(EXPORT_DISCLAIMER, { align: 'center' });
     doc.moveDown(1.5);
 
     // Summary

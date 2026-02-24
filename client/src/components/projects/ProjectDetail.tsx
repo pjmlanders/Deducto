@@ -1,16 +1,48 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useProject } from '@/hooks/useProjects';
+import { useProject, useUpdateProject } from '@/hooks/useProjects';
 import { useExpenses } from '@/hooks/useExpenses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { ArrowLeft, FileSearch, TrendingDown, TrendingUp, DollarSign, Camera, Receipt, Car } from 'lucide-react';
+import { ArrowLeft, FileSearch, TrendingDown, TrendingUp, DollarSign, Camera, Receipt, Car, Pencil } from 'lucide-react';
+import { PROJECT_COLORS } from '@/lib/constants';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: project, isLoading } = useProject(id);
   const { data: expenses } = useExpenses({ projectId: id, limit: 10 });
+  const updateProject = useUpdateProject();
+  const [showEdit, setShowEdit] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editColor, setEditColor] = useState('#3b82f6');
+
+  const openEdit = () => {
+    if (!project) return;
+    setEditName(project.name);
+    setEditDescription(project.description || '');
+    setEditColor(project.color);
+    setShowEdit(true);
+  };
+
+  const handleEdit = async () => {
+    if (!project || !editName.trim()) return;
+    await updateProject.mutateAsync({ id: project.id, name: editName, description: editDescription, color: editColor });
+    setShowEdit(false);
+  };
 
   if (isLoading) {
     return <div className="animate-pulse space-y-4">
@@ -36,6 +68,9 @@ export function ProjectDetail() {
           <div className="h-4 w-4 rounded-full" style={{ backgroundColor: project.color }} />
           <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
         </div>
+        <Button variant="ghost" size="icon" onClick={openEdit}>
+          <Pencil className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Entry Type Cards */}
@@ -85,31 +120,35 @@ export function ProjectDetail() {
       {/* Summary Cards */}
       {project.summary && (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(project.summary.totalExpenses)}
-              </div>
-              <p className="text-xs text-muted-foreground">{project.summary.expenseCount} transactions</p>
-            </CardContent>
-          </Card>
+          <Link to={`/expenses?projectId=${project.id}`} className="block">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(project.summary.totalExpenses)}
+                </div>
+                <p className="text-xs text-muted-foreground">{project.summary.expenseCount} transactions</p>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(project.summary.totalDeposits)}
-              </div>
-              <p className="text-xs text-muted-foreground">{project.summary.depositCount} deposits</p>
-            </CardContent>
-          </Card>
+          <Link to={`/deposits?projectId=${project.id}`} className="block">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(project.summary.totalDeposits)}
+                </div>
+                <p className="text-xs text-muted-foreground">{project.summary.depositCount} deposits</p>
+              </CardContent>
+            </Card>
+          </Link>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -178,6 +217,57 @@ export function ProjectDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>Update the project name, description, or color.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="detail-edit-name">Project Name</Label>
+              <Input
+                id="detail-edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label htmlFor="detail-edit-desc">Description (optional)</Label>
+              <Textarea
+                id="detail-edit-desc"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Brief description of this project"
+              />
+            </div>
+            <div>
+              <Label>Color</Label>
+              <div className="flex gap-2 mt-2">
+                {PROJECT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    className={`h-8 w-8 rounded-full transition-transform ${
+                      editColor === c ? 'ring-2 ring-offset-2 ring-primary scale-110' : ''
+                    }`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setEditColor(c)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={!editName.trim() || updateProject.isPending}>
+              {updateProject.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

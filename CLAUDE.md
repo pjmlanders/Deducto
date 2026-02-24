@@ -25,18 +25,24 @@
 - **Components**: shadcn/ui components in `client/src/components/ui/`
 - **Server routes**: Fastify plugins registered in `server/src/app.ts`
 - **Auth**: Fastify plugin verifies Clerk JWT, falls back to dev user if no key
+- **Analytics**: Vercel Analytics (`@vercel/analytics`) in client for page views/visitors (see Vercel project → Analytics)
+- **Stats**: `GET /api/v1/stats` (auth required) returns `{ users, projects, expenses }` for tracking
 
 ## Database
 - PostgreSQL via Prisma ORM
 - Schema: `server/prisma/schema.prisma`
 - Models: User, UserSettings, Project, Expense, Receipt, Deposit, Category, TaxCategory, Tag, ExpenseTag, RecurringRule, MileageEntry, Budget, SavedLocation
+- **Expense–Receipt**: One expense can have many receipts (`Expense.receipts`, `Receipt.expenseId`); `Expense.receiptId` is optional “primary” receipt for backward compatibility
 - All records scoped by `userId` for multi-tenancy
 - Production DB: Railway PostgreSQL (`Postgres-hQ0m`)
-- To push schema changes to production: `DATABASE_URL="<public_url>" npm run db:push`
+- To push schema changes to production: `cd server && DATABASE_URL="<url>" npm run db:push`
+- **Server build**: `npm run build` in server runs `prisma generate && tsc` so the Prisma client is always in sync
+- **Startup**: DB connection runs in the background; server listens immediately. If DB is unavailable, API routes return 503; `GET /api/v1/health` returns `database: "connected" | "disconnected"`
 
 ## Deployment
 - **Client**: Vercel — project `deducto` (renamed from `client`)
   - Production URL: `https://deductoapp.com` (custom domain) or `https://deducto-paul-landers-projects.vercel.app`
+  - **Vercel Analytics**: Enabled via `@vercel/analytics` and `<Analytics />` in the app; view visitors and page views in Vercel project → Analytics
   - GitHub repo: `https://github.com/pjmlanders/Deducto.git` (auto-deploys on push to master)
   - Env vars: `VITE_API_URL`, `VITE_CLERK_PUBLISHABLE_KEY`
   - Root `vercel.json` handles monorepo build (`npm run build --workspace=client`, `--include=dev`)
@@ -92,5 +98,13 @@
 - **Saved Locations**: `SavedLocation` model + `/api/v1/saved-locations` CRUD; manage in Settings; quick-fill chips in mileage form
 - **Capital Expense flag**: `isCapitalExpense` boolean on Expense model — checkbox in expense form, badge in expense detail
 - **Sidebar reorder**: Dashboard → Projects → Expenses → Deposits → Mileage → (Tools) Upload, Review, Reports
-- **Logo as home link**: Deducto wordmark in sidebar navigates to `/`
+- **Logo**: Deducto logo (emerald “D” + minus) as favicon, sidebar icon, and dashboard hero; PWA icons in `client/public/icons/`
 - **Deployment**: Vercel (client) + Railway (server + PostgreSQL) — both live in production
+
+### Phase 7: Receipts, Resilience, Analytics (Feb 2026)
+- **Multiple receipts per expense**: One expense can have many receipts (`Receipt.expenseId`, `Expense.receipts`). Batch upload offers “One expense per receipt” (review list) or “One expense for all” (`POST /api/v1/receipts/accept-batch`). Attach receipt to existing expense: `POST /api/v1/expenses/:id/receipts` with `{ receiptId }`.
+- **Server startup**: DB connection deferred so the server listens even if PostgreSQL is slow or down; non-health API routes wait for DB (with timeout) or return 503. `GET /api/v1/health` returns `database: "connected" | "disconnected"`.
+- **Build**: Server build runs `prisma generate && tsc` so the Prisma client is always generated at deploy time.
+- **Stats API**: `GET /api/v1/stats` (auth required) returns `{ users, projects, expenses }` for dashboards or monitoring.
+- **Vercel Analytics**: `@vercel/analytics` and `<Analytics />` in the client; view in Vercel project → Analytics.
+- **X-Frame-Options**: Set to `DENY` for the app; skipped for receipt file and preview URLs so PDFs can load in iframes on the receipt review page.
