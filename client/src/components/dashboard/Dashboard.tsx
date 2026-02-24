@@ -239,22 +239,22 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-muted-foreground">Active Projects</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                <FolderOpen className="h-4 w-4 text-primary" />
+        <Link to="/projects" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-muted-foreground">Active Projects</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <FolderOpen className="h-4 w-4 text-primary" />
+                </div>
               </div>
-            </div>
-            <div className="text-3xl font-bold tracking-tight">
-              {projectList.length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <Link to="/projects" className="text-primary hover:underline">View all</Link>
-            </p>
-          </CardContent>
-        </Card>
+              <div className="text-3xl font-bold tracking-tight">
+                {projectList.length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">View all</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Charts Row: Category Pie + Daily Spending Bar */}
@@ -363,16 +363,14 @@ export function Dashboard() {
 
       {/* Budget Progress */}
       {budgetStatusList.length > 0 && (
-        <Card>
+        <Link to="/settings" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Target className="h-5 w-5" />
                 Budget Progress
               </CardTitle>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/settings">Manage</Link>
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -409,7 +407,8 @@ export function Dashboard() {
               })}
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </Link>
       )}
 
       {/* Top Vendors */}
