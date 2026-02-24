@@ -147,6 +147,9 @@ export interface MileageEntry {
   roundTrip: boolean;
   rateUsed: string | number;
   deduction: string | number;
+  taxDeductible: boolean;
+  reimbursable: boolean;
+  tags: Array<{ tagId: string; tag: { id: string; name: string; color: string } }>;
   notes: string | null;
   createdAt: string;
 }

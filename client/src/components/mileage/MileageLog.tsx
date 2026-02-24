@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMileage, useMileageSummary, useCreateMileage, useDeleteMileage } from '@/hooks/useMileage';
 import { useSavedLocations } from '@/hooks/useSavedLocations';
 import { useProjects } from '@/hooks/useProjects';
+import { useTags } from '@/hooks/useTags';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +69,7 @@ export function MileageLog() {
   const { data: summary } = useMileageSummary(year);
   const { data: savedLocations } = useSavedLocations();
   const { data: projectsData } = useProjects();
+  const { data: tags } = useTags();
   const createMileage = useCreateMileage();
   const deleteMileage = useDeleteMileage();
 
@@ -81,6 +83,9 @@ export function MileageLog() {
     distance: '',
     purpose: '',
     roundTrip: false,
+    taxDeductible: true,
+    reimbursable: false,
+    tagIds: [] as string[],
     notes: '',
   });
 
@@ -126,6 +131,9 @@ export function MileageLog() {
       distance: parseFloat(form.distance),
       purpose: form.purpose,
       roundTrip: form.roundTrip,
+      taxDeductible: form.taxDeductible,
+      reimbursable: form.reimbursable,
+      tagIds: form.tagIds,
       notes: form.notes || undefined,
     });
     setForm({
@@ -136,6 +144,9 @@ export function MileageLog() {
       distance: '',
       purpose: '',
       roundTrip: false,
+      taxDeductible: true,
+      reimbursable: false,
+      tagIds: [],
       notes: '',
     });
     setRouteError(null);
@@ -351,7 +362,7 @@ export function MileageLog() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.roundTrip} onChange={(e) => setForm({ ...form, roundTrip: e.target.checked })} />
                   Round trip (double the distance)
@@ -363,6 +374,50 @@ export function MileageLog() {
                   </span>
                 )}
               </div>
+
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.taxDeductible} onChange={(e) => setForm({ ...form, taxDeductible: e.target.checked })} />
+                  Tax Deductible
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.reimbursable} onChange={(e) => setForm({ ...form, reimbursable: e.target.checked })} />
+                  Reimbursable
+                </label>
+              </div>
+
+              {tags && tags.length > 0 && (
+                <div>
+                  <Label>Tags</Label>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {tags.map((tag) => {
+                      const selected = form.tagIds.includes(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => setForm((f) => ({
+                            ...f,
+                            tagIds: selected
+                              ? f.tagIds.filter((id) => id !== tag.id)
+                              : [...f.tagIds, tag.id],
+                          }))}
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all ${
+                            selected ? 'text-white border-transparent' : 'bg-transparent'
+                          }`}
+                          style={selected
+                            ? { backgroundColor: tag.color, borderColor: tag.color }
+                            : { color: tag.color, borderColor: tag.color }
+                          }
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label>Notes</Label>
                 <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes" />
@@ -409,6 +464,21 @@ export function MileageLog() {
                             {entry.project.name}
                           </Badge>
                         )}
+                        {entry.taxDeductible && (
+                          <Badge variant="secondary" className="text-xs">Tax Deductible</Badge>
+                        )}
+                        {entry.reimbursable && (
+                          <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">Reimbursable</Badge>
+                        )}
+                        {entry.tags?.map(({ tag }) => (
+                          <span
+                            key={tag.id}
+                            className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                            style={{ backgroundColor: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
                       </div>
                       <p className="text-xs text-muted-foreground">{entry.purpose}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.date)}</p>

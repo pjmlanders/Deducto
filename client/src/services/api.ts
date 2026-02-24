@@ -230,10 +230,10 @@ export const mileageApi = {
   get: (id: string) =>
     api.get<MileageEntry>(`/mileage/${id}`).then((r) => r.data),
 
-  create: (data: { date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip?: boolean; notes?: string }) =>
+  create: (data: { date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip?: boolean; taxDeductible?: boolean; reimbursable?: boolean; tagIds?: string[]; notes?: string }) =>
     api.post<MileageEntry>('/mileage', data).then((r) => r.data),
 
-  update: (id: string, data: Partial<{ date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip: boolean; notes: string }>) =>
+  update: (id: string, data: Partial<{ date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip: boolean; taxDeductible: boolean; reimbursable: boolean; tagIds: string[]; notes: string }>) =>
     api.put<MileageEntry>(`/mileage/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
