@@ -284,20 +284,25 @@ export function SettingsPage() {
                         {budget.project.name}
                       </span>
                     )}
-                    {budget.project && budget.category && (
+                    {budget.project && (
                       <span className="text-muted-foreground">·</span>
                     )}
-                    {budget.category && (
-                      <span className="flex items-center gap-1">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: budget.category.color }}
-                        />
-                        {budget.category.name}
-                      </span>
-                    )}
-                    {!budget.project && !budget.category && (
+                    {!budget.project && !budget.category ? (
                       <span className="text-muted-foreground italic">Overall</span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        {budget.category ? (
+                          <>
+                            <span
+                              className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: budget.category.color }}
+                            />
+                            {budget.category.name}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground italic">All categories</span>
+                        )}
+                      </span>
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground">

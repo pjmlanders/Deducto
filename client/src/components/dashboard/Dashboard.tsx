@@ -132,66 +132,66 @@ export function Dashboard() {
       </div>
 
       {/* Project Tiles */}
-      {projectList.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Projects</h2>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Projects</h2>
+          {projectList.length > 0 && (
             <Button asChild variant="ghost" size="sm">
               <Link to="/projects">View all</Link>
             </Button>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {projectList.slice(0, 6).map((project) => (
-              <Card
-                key={project.id}
-                className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
-                style={{ borderLeftColor: project.color }}
-                onClick={() => navigate(`/projects/${project.id}`)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="font-semibold text-sm truncate flex-1 pr-2">{project.name}</p>
-                    {project._count && (
-                      <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full flex-shrink-0">
-                        {project._count.expenses + project._count.deposits} items
-                      </span>
-                    )}
-                  </div>
-                  {project.summary ? (
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Expenses</span>
-                        <span className="text-red-600 font-medium">{formatCurrency(project.summary.totalExpenses)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Deposits</span>
-                        <span className="text-green-600 font-medium">{formatCurrency(project.summary.totalDeposits)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs border-t pt-1 mt-1">
-                        <span className="text-muted-foreground">Net</span>
-                        <span className={`font-semibold ${project.summary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(project.summary.netBalance)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">No activity yet</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          )}
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {projectList.slice(0, 6).map((project) => (
             <Card
-              className="cursor-pointer hover:shadow-md transition-shadow border-dashed"
-              onClick={() => setShowCreate(true)}
+              key={project.id}
+              className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
+              style={{ borderLeftColor: project.color }}
+              onClick={() => navigate(`/projects/${project.id}`)}
             >
-              <CardContent className="p-4 flex flex-col items-center justify-center h-full min-h-[100px] text-muted-foreground">
-                <Plus className="h-6 w-6 mb-1" />
-                <span className="text-sm">New Project</span>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <p className="font-semibold text-sm truncate flex-1 pr-2">{project.name}</p>
+                  {project._count && (
+                    <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full flex-shrink-0">
+                      {project._count.expenses + project._count.deposits} items
+                    </span>
+                  )}
+                </div>
+                {project.summary ? (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Expenses</span>
+                      <span className="text-red-600 font-medium">{formatCurrency(project.summary.totalExpenses)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Deposits</span>
+                      <span className="text-green-600 font-medium">{formatCurrency(project.summary.totalDeposits)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs border-t pt-1 mt-1">
+                      <span className="text-muted-foreground">Net</span>
+                      <span className={`font-semibold ${project.summary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(project.summary.netBalance)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No activity yet</p>
+                )}
               </CardContent>
             </Card>
-          </div>
+          ))}
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-dashed"
+            onClick={() => setShowCreate(true)}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center h-full min-h-[100px] text-muted-foreground">
+              <Plus className="h-6 w-6 mb-1" />
+              <span className="text-sm">New Project</span>
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
 
       {/* Summary Cards */}
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 min-w-0">

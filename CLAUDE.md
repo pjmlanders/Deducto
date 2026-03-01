@@ -53,6 +53,7 @@
 - **Auth**: Clerk — add allowed domains in Clerk Dashboard → Configure → Domains
   - `https://deductoapp.com`, `https://deducto-paul-landers-projects.vercel.app`
 - **Note**: Vercel has "Vercel Authentication" protection enabled — disable in Project Settings → Deployment Protection for public access
+  - **Custom domain (e.g. deducto.com)**: If testers see "server can't be found" on the custom domain while the Vercel URL works, see [docs/CUSTOM-DOMAIN.md](docs/CUSTOM-DOMAIN.md) for step-by-step DNS and Clerk setup.
 
 ## AI Receipt Processing
 - Claude Sonnet for vision-based receipt parsing

@@ -16,7 +16,10 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   const clerkSecretKey = process.env.CLERK_SECRET_KEY;
 
   if (!clerkSecretKey) {
-    fastify.log.warn('CLERK_SECRET_KEY not set - auth will be disabled');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CLERK_SECRET_KEY must be set in production');
+    }
+    fastify.log.warn('CLERK_SECRET_KEY not set - auth will be disabled (dev mode only)');
   }
 
   const clerk = clerkSecretKey
