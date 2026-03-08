@@ -77,9 +77,9 @@ const categoryRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: 'Category not found' });
     }
 
-    // Remove category from expenses first (set to null)
+    // Remove category from this user's expenses first (set to null)
     await fastify.prisma.expense.updateMany({
-      where: { categoryId: request.params.id },
+      where: { categoryId: request.params.id, userId: request.userId },
       data: { categoryId: null },
     });
 

@@ -1,16 +1,14 @@
 import { FastifyPluginAsync } from 'fastify';
 
 const statsRoutes: FastifyPluginAsync = async (fastify) => {
-  /** GET /api/v1/stats — aggregate counts (user count, etc.). Requires auth. */
-  fastify.get('/stats', async () => {
-    const [userCount, projectCount, expenseCount] = await Promise.all([
-      fastify.prisma.user.count(),
-      fastify.prisma.project.count(),
-      fastify.prisma.expense.count(),
+  /** GET /api/v1/stats — aggregate counts scoped to the authenticated user. */
+  fastify.get('/stats', async (request) => {
+    const [projectCount, expenseCount] = await Promise.all([
+      fastify.prisma.project.count({ where: { userId: request.userId } }),
+      fastify.prisma.expense.count({ where: { userId: request.userId } }),
     ]);
 
     return {
-      users: userCount,
       projects: projectCount,
       expenses: expenseCount,
     };

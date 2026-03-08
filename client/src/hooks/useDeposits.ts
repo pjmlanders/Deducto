@@ -4,7 +4,7 @@ import { depositsApi } from '@/services/api';
 
 export function useDeposits(params: { projectId?: string; page?: number; limit?: number } = {}) {
   return useQuery({
-    queryKey: ['deposits', params],
+    queryKey: ['deposits', params.projectId, params.page, params.limit],
     queryFn: () => depositsApi.list(params),
   });
 }

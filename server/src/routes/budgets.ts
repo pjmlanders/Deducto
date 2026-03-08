@@ -96,6 +96,26 @@ const budgetRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'period must be monthly, quarterly, or yearly' });
     }
 
+    // Verify user owns the project if specified
+    if (projectId) {
+      const project = await fastify.prisma.project.findFirst({
+        where: { id: projectId, userId: request.userId },
+      });
+      if (!project) {
+        return reply.status(404).send({ error: 'Project not found' });
+      }
+    }
+
+    // Verify user owns the category if specified
+    if (categoryId) {
+      const category = await fastify.prisma.category.findFirst({
+        where: { id: categoryId, userId: request.userId },
+      });
+      if (!category) {
+        return reply.status(404).send({ error: 'Category not found' });
+      }
+    }
+
     const now = new Date();
     const budget = await fastify.prisma.budget.create({
       data: {

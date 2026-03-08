@@ -502,13 +502,6 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     ]);
 
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
-    const chunks: Buffer[] = [];
-
-    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-
-    const pdfReady = new Promise<Buffer>((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-    });
 
     const periodLabel = month
       ? `${new Date(year, month - 1).toLocaleString('default', { month: 'long' })} ${year}`
@@ -574,18 +567,16 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     doc.font('Helvetica-Bold');
     doc.text(`Total: $${totalExpenses.toFixed(2)}`, col.amount, doc.y);
 
-    doc.end();
-
-    const pdfBuffer = await pdfReady;
-
     const filename = month
       ? `expense-report-${year}-${String(month).padStart(2, '0')}.pdf`
       : `expense-report-${year}.pdf`;
 
     reply
       .header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `attachment; filename="${filename}"`)
-      .send(pdfBuffer);
+      .header('Content-Disposition', `attachment; filename="${filename}"`);
+
+    doc.pipe(reply.raw);
+    doc.end();
   });
 };
 

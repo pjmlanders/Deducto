@@ -95,6 +95,14 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'date, startLocation, endLocation, distance, purpose, and projectId are required' });
     }
 
+    // Verify user owns the project
+    const project = await fastify.prisma.project.findFirst({
+      where: { id: projectId, userId: request.userId },
+    });
+    if (!project) {
+      return reply.status(404).send({ error: 'Project not found' });
+    }
+
     const actualDistance = roundTrip ? distance * 2 : distance;
     const entryYear = new Date(date).getFullYear();
     const rateUsed = getIrsRate(entryYear);
@@ -148,6 +156,16 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     if (!existing) return reply.status(404).send({ error: 'Mileage entry not found' });
 
     const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip, taxDeductible, reimbursable, tagIds, notes } = request.body;
+
+    // Verify user owns the project if changing it
+    if (projectId !== undefined && projectId !== null) {
+      const project = await fastify.prisma.project.findFirst({
+        where: { id: projectId, userId: request.userId },
+      });
+      if (!project) {
+        return reply.status(404).send({ error: 'Project not found' });
+      }
+    }
 
     const newRoundTrip = roundTrip ?? existing.roundTrip;
     const baseDistance = distance ?? Number(existing.distance) / (existing.roundTrip ? 2 : 1);

@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { Prisma } from '@prisma/client';
 import path from 'path';
 import fs from 'fs/promises';
+import { createReadStream } from 'fs';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { validateWithZod } from '../utils/validate.js';
@@ -70,6 +71,13 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Strip data URL prefix if present
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+
+    // Validate size before decoding (base64 is ~33% larger than binary)
+    const maxBase64Length = Math.ceil(10 * 1024 * 1024 * 4 / 3); // 10MB in base64
+    if (base64Data.length > maxBase64Length) {
+      return reply.status(400).send({ error: 'Image too large. Maximum size is 10MB.' });
+    }
+
     const buffer = Buffer.from(base64Data, 'base64');
 
     const userDir = await ensureUploadDir(request.userId);
@@ -98,6 +106,8 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
   // List receipts (supports ?status=pending to find unreviewed ones)
   fastify.get('/receipts', async (request) => {
     const query = request.query as Record<string, string>;
+    const page = parseInt(query.page) || 1;
+    const limit = Math.min(parseInt(query.limit) || 100, 500);
 
     const where: Prisma.ReceiptWhereInput = { userId: request.userId };
 
@@ -113,6 +123,8 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         expense: { select: { id: true } },
       },
       orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     return receipts;
@@ -143,9 +155,10 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const fileBuffer = await fs.readFile(receipt.storagePath);
+      await fs.access(receipt.storagePath);
+      const stream = createReadStream(receipt.storagePath);
       reply.type(receipt.mimeType);
-      return reply.send(fileBuffer);
+      return reply.send(stream);
     } catch {
       return reply.status(404).send({ error: 'Receipt file not found' });
     }

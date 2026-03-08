@@ -168,6 +168,16 @@ const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     const body = validateWithZod(reply, updateExpenseSchema, request.body);
     if (body === undefined) return;
 
+    // Verify user owns the project if changing it
+    if (body.projectId !== undefined && body.projectId !== null) {
+      const project = await fastify.prisma.project.findFirst({
+        where: { id: body.projectId, userId: request.userId },
+      });
+      if (!project) {
+        return reply.status(404).send({ error: 'Project not found' });
+      }
+    }
+
     if (body.tagIds !== undefined) {
       await fastify.prisma.expenseTag.deleteMany({
         where: { expenseId: request.params.id },

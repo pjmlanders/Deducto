@@ -4,8 +4,9 @@ import { expensesApi } from '@/services/api';
 import type { ExpenseFilters, ExpenseFormData } from '@/types';
 
 export function useExpenses(filters: ExpenseFilters = {}) {
+  const { projectId, categoryId, dateFrom, dateTo, vendor, minAmount, maxAmount, reimbursementStatus, isDeductible, isReimbursable, search, tagIds, source, page, limit, sort, order } = filters;
   return useQuery({
-    queryKey: ['expenses', filters],
+    queryKey: ['expenses', projectId, categoryId, dateFrom, dateTo, vendor, minAmount, maxAmount, reimbursementStatus, isDeductible, isReimbursable, search, tagIds, source, page, limit, sort, order],
     queryFn: () => expensesApi.list(filters),
     placeholderData: (prev) => prev,
   });

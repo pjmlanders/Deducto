@@ -22,6 +22,7 @@ export function useCreateMileage() {
     mutationFn: mileageApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mileage'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Trip logged');
     },
     onError: () => toast.error('Failed to log trip'),
@@ -34,6 +35,7 @@ export function useDeleteMileage() {
     mutationFn: mileageApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mileage'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Trip deleted');
     },
     onError: () => toast.error('Failed to delete trip'),

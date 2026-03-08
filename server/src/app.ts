@@ -49,7 +49,10 @@ export async function buildApp() {
   // CORS
   await app.register(cors, {
     origin: process.env.NODE_ENV === 'production'
-      ? process.env.CLIENT_URL || true
+      ? process.env.CLIENT_URL || [
+          'https://deductoapp.com',
+          'https://deducto-paul-landers-projects.vercel.app',
+        ]
       : true,
     credentials: true,
   });
