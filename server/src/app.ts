@@ -51,6 +51,7 @@ export async function buildApp() {
     origin: process.env.NODE_ENV === 'production'
       ? process.env.CLIENT_URL || [
           'https://deductoapp.com',
+          'https://www.deductoapp.com',
           'https://deducto-paul-landers-projects.vercel.app',
         ]
       : true,
