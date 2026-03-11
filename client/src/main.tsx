@@ -67,7 +67,7 @@ const ClerkApp = React.lazy(async () => {
             </SignedIn>
             <SignedOut>
               <div className="flex min-h-screen items-center justify-center bg-background">
-                <SignIn />
+                <SignIn routing="hash" />
               </div>
             </SignedOut>
           </BrowserRouter>
