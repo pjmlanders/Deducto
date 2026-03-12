@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useReceiptBlobUrl } from '@/hooks/useReceiptBlobUrl';
 import { useAcceptReceipt, useProcessReceipt } from '@/hooks/useReceipts';
 import { useProjects } from '@/hooks/useProjects';
 import { useCategories } from '@/hooks/useCategories';
@@ -84,6 +85,7 @@ export function ReceiptAcceptModal({ receipt, projectId, open, onOpenChange }: P
 
   const isValid = form.projectId && form.vendor && form.amount && form.date;
   const isPdf = receipt.mimeType === 'application/pdf';
+  const previewBlobUrl = useReceiptBlobUrl(!isPdf ? `/receipts/${receipt.id}/preview` : null);
   const isFailed = receipt.processingStatus === 'failed';
   const isDuplicate = receipt.isDuplicate;
   const isIncomplete = receipt.processingStatus === 'completed' &&
@@ -111,18 +113,16 @@ export function ReceiptAcceptModal({ receipt, projectId, open, onOpenChange }: P
         {/* Receipt preview */}
         <div className="rounded border overflow-hidden bg-gray-50">
           {isPdf ? (
-            <a
-              href={receiptsApi.getFileUrl(receipt.id)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => receiptsApi.openFile(receipt.id)}
               className="flex items-center gap-2 p-3 text-sm text-primary hover:underline"
             >
               <ExternalLink className="h-4 w-4" />
               View PDF receipt
-            </a>
+            </button>
           ) : (
             <img
-              src={receiptsApi.getPreviewUrl(receipt.id)}
+              src={previewBlobUrl ?? undefined}
               alt="Receipt"
               className="w-full max-h-48 object-contain"
             />

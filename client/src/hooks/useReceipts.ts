@@ -3,6 +3,14 @@ import { toast } from 'sonner';
 import { receiptsApi } from '@/services/api';
 import type { ExpenseFormData } from '@/types';
 
+export function useReceiptIssueCount() {
+  return useQuery({
+    queryKey: ['receipts', 'issues-count'],
+    queryFn: () => receiptsApi.issuesCount(),
+    refetchInterval: 30_000,
+  });
+}
+
 export function usePendingReceipts() {
   return useQuery({
     queryKey: ['receipts', 'pending'],
@@ -54,7 +62,7 @@ export function useDeleteReceipt() {
   return useMutation({
     mutationFn: receiptsApi.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['receipts', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       toast.success('Receipt deleted');
     },
     onError: () => toast.error('Failed to delete receipt'),
@@ -71,7 +79,7 @@ export function useAcceptReceipt() {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['receipts', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       toast.success('Expense saved from receipt');
     },
     onError: () => toast.error('Failed to save expense'),

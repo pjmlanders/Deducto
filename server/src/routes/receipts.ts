@@ -103,6 +103,33 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(receipt);
   });
 
+  // Count receipts that need user attention (failed, duplicate, or incomplete extraction)
+  fastify.get('/receipts/issues-count', async (request) => {
+    const count = await fastify.prisma.receipt.count({
+      where: {
+        userId: request.userId,
+        expenseId: null,
+        OR: [
+          { processingStatus: 'failed' },
+          { isDuplicate: true },
+          {
+            processingStatus: 'completed',
+            AND: [
+              { extractedVendor: null },
+            ],
+          },
+          {
+            processingStatus: 'completed',
+            AND: [
+              { extractedAmount: null },
+            ],
+          },
+        ],
+      },
+    });
+    return { count };
+  });
+
   // List receipts (supports ?status=pending to find unreviewed ones)
   fastify.get('/receipts', async (request) => {
     const query = request.query as Record<string, string>;

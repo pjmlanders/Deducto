@@ -217,8 +217,9 @@ model Category {
   sortOrder Int      @default(0)
   isDefault Boolean  @default(false)
 
-  expenses Expense[]
-  budgets  Budget[]
+  expenses        Expense[]
+  budgets         Budget[]
+  mileageEntries  MileageEntry[]
 
   createdAt DateTime @default(now())
 
@@ -307,6 +308,9 @@ model MileageEntry {
   taxDeductible Boolean  @default(true)
   reimbursable  Boolean  @default(false)
   notes         String?
+  returnDate    DateTime?   // return date for round trips with different date
+  categoryId    String?
+  category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

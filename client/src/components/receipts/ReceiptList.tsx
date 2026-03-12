@@ -34,14 +34,16 @@ export function ReceiptList() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Receipt Issues</h1>
           <p className="text-sm text-muted-foreground">
-            {receipts?.length || 0} receipt{receipts?.length !== 1 ? 's' : ''} pending
+            {receipts?.length
+              ? `${receipts.length} receipt${receipts.length !== 1 ? 's' : ''} need${receipts.length === 1 ? 's' : ''} attention`
+              : 'No issues — all receipts have been processed successfully'}
             {projectName && <> for <span className="font-medium text-foreground">{projectName}</span></>}
           </p>
         </div>
         <Button asChild>
-          <Link to={`/scan${pq}`}>Upload New</Link>
+          <Link to={`/scan${pq}`}>Scan Receipt</Link>
         </Button>
       </div>
 
@@ -55,9 +57,9 @@ export function ReceiptList() {
         <Card>
           <CardContent className="flex flex-col items-center py-12 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No pending receipts</h3>
+            <h3 className="text-lg font-semibold mb-1">No issues</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              All receipts have been processed. Upload new ones to get started.
+              All scanned receipts have been successfully processed into expenses.
             </p>
             <Button asChild>
               <Link to={`/scan${pq}`}>Scan or Upload</Link>

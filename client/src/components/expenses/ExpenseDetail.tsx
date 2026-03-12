@@ -221,16 +221,14 @@ export function ExpenseDetail() {
               <ul className="space-y-2">
                 {(expense.receipts?.length ? expense.receipts : expense.receipt ? [expense.receipt] : []).map((r) => (
                   <li key={r.id}>
-                    <a
-                      href={receiptsApi.getFileUrl(r.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => receiptsApi.openFile(r.id)}
                       className="text-sm text-primary hover:underline flex items-center gap-1"
                     >
                       <Receipt className="h-4 w-4 shrink-0" />
                       {((r as { originalName?: string }).originalName) || 'View receipt'}
                       <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
+                    </button>
                   </li>
                 ))}
               </ul>

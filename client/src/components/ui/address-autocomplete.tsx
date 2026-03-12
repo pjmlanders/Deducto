@@ -35,7 +35,7 @@ export function AddressAutocomplete({ value, onChange, placeholder, id }: Addres
       setLoading(true);
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=5&addressdetails=0`,
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=5&addressdetails=0&countrycodes=us`,
           { headers: { 'Accept-Language': 'en', 'User-Agent': 'Deducto/1.0' } }
         );
         if (res.ok) {

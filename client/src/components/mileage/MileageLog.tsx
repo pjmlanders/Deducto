@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useMileage, useMileageSummary, useCreateMileage, useDeleteMileage } from '@/hooks/useMileage';
 import { useSavedLocations } from '@/hooks/useSavedLocations';
 import { useProjects } from '@/hooks/useProjects';
 import { useTags } from '@/hooks/useTags';
+import { useCategories } from '@/hooks/useCategories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Car, Plus, Trash2, MapPin, X, Route, Loader2, Bookmark } from 'lucide-react';
+import { Car, Plus, Trash2, MapPin, X, Route, Loader2, Bookmark, ArrowLeft } from 'lucide-react';
 import { formatCurrency, formatDate, formatDateInput } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
@@ -34,7 +36,7 @@ function getIrsRate(year: number): number {
 }
 
 async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`;
   const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
   if (!res.ok) return null;
   const data = await res.json();
@@ -64,7 +66,9 @@ async function calculateRoute(start: { lat: number; lng: number }, end: { lat: n
 export function MileageLog() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const [showForm, setShowForm] = useState(false);
+  const [searchParams] = useSearchParams();
+  const urlProjectId = searchParams.get('projectId');
+  const [showForm, setShowForm] = useState(!!urlProjectId);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [distanceMode, setDistanceMode] = useState<'enter' | 'calculate'>('enter');
   const [routeCalculating, setRouteCalculating] = useState(false);
@@ -80,6 +84,7 @@ export function MileageLog() {
   const { data: savedLocations } = useSavedLocations();
   const { data: projectsData } = useProjects();
   const { data: tags } = useTags();
+  const { data: categories } = useCategories();
   const createMileage = useCreateMileage();
   const deleteMileage = useDeleteMileage();
 
@@ -87,12 +92,14 @@ export function MileageLog() {
 
   const [form, setForm] = useState({
     date: formatDateInput(new Date()),
-    projectId: '',
+    projectId: urlProjectId || '',
     startLocation: '',
     endLocation: '',
     distance: '',
     purpose: '',
     roundTrip: false,
+    returnDate: '',
+    categoryId: '',
     taxDeductible: true,
     reimbursable: false,
     tagIds: [] as string[],
@@ -141,6 +148,8 @@ export function MileageLog() {
       distance: parseFloat(form.distance),
       purpose: form.purpose,
       roundTrip: form.roundTrip,
+      returnDate: form.roundTrip && form.returnDate ? form.returnDate : undefined,
+      categoryId: form.categoryId || undefined,
       taxDeductible: form.taxDeductible,
       reimbursable: form.reimbursable,
       tagIds: form.tagIds,
@@ -148,12 +157,14 @@ export function MileageLog() {
     });
     setForm({
       date: formatDateInput(new Date()),
-      projectId: '',
+      projectId: urlProjectId || '',
       startLocation: '',
       endLocation: '',
       distance: '',
       purpose: '',
       roundTrip: false,
+      returnDate: '',
+      categoryId: '',
       taxDeductible: true,
       reimbursable: false,
       tagIds: [],
@@ -169,9 +180,16 @@ export function MileageLog() {
   return (
     <div className="space-y-6 min-w-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Mileage Tracking</h1>
-          <p className="text-sm text-muted-foreground">Track business mileage for tax deductions</p>
+        <div className="min-w-0 flex items-center gap-3">
+          {urlProjectId && (
+            <Button variant="ghost" size="icon" asChild className="flex-shrink-0">
+              <Link to={`/projects/${urlProjectId}`}><ArrowLeft className="h-5 w-5" /></Link>
+            </Button>
+          )}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Mileage Tracking</h1>
+            <p className="text-sm text-muted-foreground">Track business mileage for tax deductions</p>
+          </div>
         </div>
         <Button onClick={() => setShowForm(!showForm)} className="flex-shrink-0">
           {showForm ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Plus className="h-4 w-4 mr-2" /> Log Trip</>}
@@ -273,31 +291,40 @@ export function MileageLog() {
 
               {/* Saved locations quick-fill */}
               {savedLocations && savedLocations.length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
-                    <Bookmark className="h-3 w-3" /> Saved locations — click to fill start or end:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {savedLocations.map((loc) => (
-                      <div key={loc.id} className="flex rounded-md border overflow-hidden text-xs">
-                        <button
-                          type="button"
-                          className="px-2 py-1 hover:bg-muted transition-colors font-medium"
-                          title={loc.address}
-                          onClick={() => setForm((f) => ({ ...f, startLocation: loc.address }))}
-                        >
-                          {loc.name} →Start
-                        </button>
-                        <div className="w-px bg-border" />
-                        <button
-                          type="button"
-                          className="px-2 py-1 hover:bg-muted transition-colors"
-                          onClick={() => setForm((f) => ({ ...f, endLocation: loc.address }))}
-                        >
-                          End
-                        </button>
-                      </div>
-                    ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                      <Bookmark className="h-3 w-3" /> Fill start from saved
+                    </Label>
+                    <Select onValueChange={(v) => setForm((f) => ({ ...f, startLocation: v }))}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select location…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {savedLocations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.address}>
+                            <span className="font-medium">{loc.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                      <Bookmark className="h-3 w-3" /> Fill end from saved
+                    </Label>
+                    <Select onValueChange={(v) => setForm((f) => ({ ...f, endLocation: v }))}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select location…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {savedLocations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.address}>
+                            <span className="font-medium">{loc.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -371,17 +398,46 @@ export function MileageLog() {
                   <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="Business meeting, site visit…" />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Category</Label>
+                  <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v === 'none' ? '' : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No category</SelectItem>
+                      {categories?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
+                            {c.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.roundTrip} onChange={(e) => setForm({ ...form, roundTrip: e.target.checked })} />
-                  Round trip (double the distance)
-                </label>
-                {form.distance && (
-                  <span className="text-sm text-muted-foreground">
-                    = {(parseFloat(form.distance) * (form.roundTrip ? 2 : 1)).toFixed(1)} miles
-                    ({formatCurrency(parseFloat(form.distance) * (form.roundTrip ? 2 : 1) * getIrsRate(form.date ? new Date(form.date).getFullYear() : currentYear))} deduction)
-                  </span>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={form.roundTrip} onChange={(e) => setForm({ ...form, roundTrip: e.target.checked, returnDate: '' })} />
+                    Round trip (double the distance)
+                  </label>
+                  {form.distance && (
+                    <span className="text-sm text-muted-foreground">
+                      = {(parseFloat(form.distance) * (form.roundTrip ? 2 : 1)).toFixed(1)} miles
+                      ({formatCurrency(parseFloat(form.distance) * (form.roundTrip ? 2 : 1) * getIrsRate(form.date ? new Date(form.date).getFullYear() : currentYear))} deduction)
+                    </span>
+                  )}
+                </div>
+                {form.roundTrip && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Return Date <span className="text-muted-foreground font-normal">(if different)</span></Label>
+                      <Input type="date" value={form.returnDate} onChange={(e) => setForm({ ...form, returnDate: e.target.value })} />
+                    </div>
+                  </div>
                 )}
               </div>
 

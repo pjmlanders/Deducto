@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useReceiptBlobUrl } from '@/hooks/useReceiptBlobUrl';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useReceiptStatus, useAcceptReceipt, useProcessReceipt } from '@/hooks/useReceipts';
 import { useProjects } from '@/hooks/useProjects';
@@ -16,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Check, AlertTriangle, ArrowLeft } from 'lucide-react';
-import { receiptsApi } from '@/services/api';
 import { formatDateInput } from '@/lib/utils';
 
 export function ReceiptProcessing() {
@@ -30,6 +30,9 @@ export function ReceiptProcessing() {
   const { data: categories } = useCategories();
   const acceptReceipt = useAcceptReceipt();
   const processReceipt = useProcessReceipt();
+  const isPdf = receipt?.mimeType === 'application/pdf';
+  const fileBlobUrl = useReceiptBlobUrl(id && isPdf ? `/receipts/${id}/file` : null);
+  const previewBlobUrl = useReceiptBlobUrl(id && !isPdf ? `/receipts/${id}/preview` : null);
 
   const [form, setForm] = useState({
     projectId: projectId || '',
@@ -116,16 +119,16 @@ export function ReceiptProcessing() {
       {id && (
         <Card>
           <CardContent className="p-2">
-            {receipt?.mimeType === 'application/pdf' ? (
+            {isPdf ? (
               <iframe
-                src={`${receiptsApi.getFileUrl(id)}#toolbar=0&navpanes=0&view=FitH`}
+                src={fileBlobUrl ? `${fileBlobUrl}#toolbar=0&navpanes=0&view=FitH` : undefined}
                 className="w-full rounded border-0"
                 style={{ height: '500px' }}
                 title="Receipt PDF"
               />
             ) : (
               <img
-                src={receiptsApi.getPreviewUrl(id)}
+                src={previewBlobUrl ?? undefined}
                 alt="Receipt"
                 className="w-full rounded max-h-64 object-contain bg-gray-50"
               />

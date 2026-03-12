@@ -71,6 +71,9 @@ export function Dashboard() {
 
   const [trendWindow, setTrendWindow] = useState<'ytd' | '6' | '12' | '24'>('12');
   const [trendYoY, setTrendYoY] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
 
   const handleCreateProject = async () => {
     if (!newName.trim()) return;
@@ -81,19 +84,17 @@ export function Dashboard() {
     setShowCreate(false);
   };
   const { data: monthly, isLoading } = useQuery({
-    queryKey: ['reports', 'monthly', currentDate.getFullYear(), currentDate.getMonth() + 1],
+    queryKey: ['reports', 'monthly', selectedYear, selectedMonth, selectedProjectId],
     queryFn: () => reportsApi.monthly({
-      year: currentDate.getFullYear(),
-      month: currentDate.getMonth() + 1,
+      year: selectedYear,
+      month: selectedMonth,
+      projectId: selectedProjectId || undefined,
     }),
   });
 
   const { data: projects } = useProjects();
 
-  const { data: budgetStatus } = useBudgetStatus(
-    currentDate.getFullYear(),
-    currentDate.getMonth() + 1,
-  );
+  const { data: budgetStatus } = useBudgetStatus(selectedYear, selectedMonth);
 
   const trendFetchMonths = trendYoY
     ? 24
@@ -102,8 +103,8 @@ export function Dashboard() {
     : parseInt(trendWindow);
 
   const { data: trend } = useQuery({
-    queryKey: ['reports', 'trend', trendFetchMonths],
-    queryFn: () => reportsApi.trend({ months: trendFetchMonths }),
+    queryKey: ['reports', 'trend', trendFetchMonths, selectedProjectId],
+    queryFn: () => reportsApi.trend({ months: trendFetchMonths, projectId: selectedProjectId || undefined }),
   });
 
   // Guard against unexpected API responses (e.g. when backend URL is missing in production)
@@ -117,10 +118,48 @@ export function Dashboard() {
   return (
     <div className="space-y-6 min-w-0">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })} Overview
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Month selector */}
+          <div className="flex items-center rounded-md border overflow-hidden text-sm">
+            <button
+              className="px-2 py-1 hover:bg-muted transition-colors"
+              onClick={() => {
+                if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear((y) => y - 1); }
+                else setSelectedMonth((m) => m - 1);
+              }}
+            >‹</button>
+            <span className="px-3 py-1 font-medium text-sm min-w-[110px] text-center">
+              {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+            </span>
+            <button
+              className="px-2 py-1 hover:bg-muted transition-colors"
+              onClick={() => {
+                if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear((y) => y + 1); }
+                else setSelectedMonth((m) => m + 1);
+              }}
+            >›</button>
+          </div>
+          {/* Project filter */}
+          <select
+            className="h-8 rounded-md border px-2 text-sm bg-background"
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+          >
+            <option value="">All Projects</option>
+            {projectList.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          {(selectedProjectId || selectedYear !== currentDate.getFullYear() || selectedMonth !== currentDate.getMonth() + 1) && (
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+              onClick={() => { setSelectedProjectId(''); setSelectedYear(currentDate.getFullYear()); setSelectedMonth(currentDate.getMonth() + 1); }}
+            >
+              Reset
+            </button>
+          )}
+        </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
             <Link to="/expenses/new">Add Expense</Link>
@@ -244,7 +283,9 @@ export function Dashboard() {
             <div className={`text-3xl font-bold tracking-tight mt-1 ${(monthly?.net || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {isLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(monthly?.net || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'short', year: 'numeric' })}
+            </p>
           </CardContent>
         </Card>
 
@@ -602,7 +643,7 @@ export function Dashboard() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No expenses yet this month</h3>
+            <h3 className="text-lg font-semibold mb-2">No expenses for this period</h3>
             <p className="text-muted-foreground text-center mb-4">
               Start tracking your expenses by scanning a receipt or adding one manually.
             </p>

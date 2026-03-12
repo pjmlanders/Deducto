@@ -138,8 +138,11 @@ export interface Deposit {
 export interface MileageEntry {
   id: string;
   date: string;
+  returnDate: string | null;
   projectId: string | null;
   project: { id: string; name: string; color: string } | null;
+  categoryId: string | null;
+  category: { id: string; name: string; color: string } | null;
   startLocation: string;
   endLocation: string;
   distance: string | number;

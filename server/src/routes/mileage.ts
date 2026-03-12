@@ -61,6 +61,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
   const entryInclude = {
     project: { select: { id: true, name: true, color: true } },
     tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
+    category: { select: { id: true, name: true, color: true } },
   };
 
   // Get single mileage entry
@@ -87,9 +88,11 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
       reimbursable?: boolean;
       tagIds?: string[];
       notes?: string;
+      returnDate?: string;
+      categoryId?: string;
     };
   }>('/mileage', async (request, reply) => {
-    const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip = false, taxDeductible = true, reimbursable = false, tagIds, notes } = request.body;
+    const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip = false, taxDeductible = true, reimbursable = false, tagIds, notes, returnDate, categoryId } = request.body;
 
     if (!date || !startLocation || !endLocation || !distance || !purpose || !projectId) {
       return reply.status(400).send({ error: 'date, startLocation, endLocation, distance, purpose, and projectId are required' });
@@ -123,6 +126,8 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
         taxDeductible,
         reimbursable,
         notes: notes || null,
+        ...(returnDate && { returnDate: new Date(returnDate) }),
+        ...(categoryId && { categoryId }),
         ...(tagIds?.length && {
           tags: { create: tagIds.map((tagId) => ({ tagId })) },
         }),
@@ -148,6 +153,8 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
       reimbursable?: boolean;
       tagIds?: string[];
       notes?: string;
+      returnDate?: string | null;
+      categoryId?: string | null;
     };
   }>('/mileage/:id', async (request, reply) => {
     const existing = await fastify.prisma.mileageEntry.findFirst({
@@ -155,7 +162,7 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (!existing) return reply.status(404).send({ error: 'Mileage entry not found' });
 
-    const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip, taxDeductible, reimbursable, tagIds, notes } = request.body;
+    const { date, startLocation, endLocation, distance, purpose, projectId, roundTrip, taxDeductible, reimbursable, tagIds, notes, returnDate, categoryId } = request.body;
 
     // Verify user owns the project if changing it
     if (projectId !== undefined && projectId !== null) {
@@ -193,6 +200,8 @@ const mileageRoutes: FastifyPluginAsync = async (fastify) => {
         ...(taxDeductible != null && { taxDeductible }),
         ...(reimbursable != null && { reimbursable }),
         ...(notes !== undefined && { notes: notes || null }),
+        ...(returnDate !== undefined && { returnDate: returnDate ? new Date(returnDate) : null }),
+        ...(categoryId !== undefined && { categoryId: categoryId || null }),
         ...(tagIds != null && {
           tags: {
             deleteMany: {},

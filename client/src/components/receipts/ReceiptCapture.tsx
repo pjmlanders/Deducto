@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useUploadReceipt, useCaptureReceipt, useProcessReceipt, useAcceptReceipt } from '@/hooks/useReceipts';
 import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { Camera, Upload, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { receiptsApi } from '@/services/api';
 import { formatDateInput } from '@/lib/utils';
@@ -243,7 +243,14 @@ export function ReceiptCapture() {
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-center">Upload Receipts</h1>
+      <div className="flex items-center justify-center gap-3">
+        {urlProjectId && (
+          <Button variant="ghost" size="icon" asChild>
+            <Link to={`/projects/${urlProjectId}`}><ArrowLeft className="h-5 w-5" /></Link>
+          </Button>
+        )}
+        <h1 className="text-2xl font-semibold tracking-tight text-center">Upload Receipts</h1>
+      </div>
       {projectName && (
         <p className="text-sm text-muted-foreground text-center">
           For project: <span className="font-medium text-foreground">{projectName}</span>

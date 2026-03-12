@@ -21,7 +21,8 @@
 - **Server state**: TanStack React Query with custom hooks in `client/src/hooks/`
 - **UI state**: Zustand store in `client/src/stores/uiStore.ts`
 - **API client**: Axios with Clerk token interceptor in `client/src/services/api.ts`
-- **Routing**: React Router v7 with Layout component using `<Outlet />`
+- **Routing**: React Router v7 with Layout component using `<Outlet />`; Clerk SignIn uses `routing="hash"` to avoid URL conflicts with BrowserRouter
+- **Layout**: `Header` (logo, Reports icon, Settings icon, user avatar) + content area + `MobileNav` (mobile-only bottom nav: Home, Scan, Reports, Settings). No persistent sidebar — `Sidebar.tsx` exists but is not used in Layout.
 - **Components**: shadcn/ui components in `client/src/components/ui/`
 - **Server routes**: Fastify plugins registered in `server/src/app.ts`
 - **Auth**: Fastify plugin verifies Clerk JWT, falls back to dev user if no key
@@ -51,7 +52,7 @@
   - Env vars set: `DATABASE_URL`, `NODE_ENV=production`, `ANTHROPIC_API_KEY`, `CLERK_SECRET_KEY`
   - Deploy: `cd server && railway up --service deducto-server`
 - **Auth**: Clerk — add allowed domains in Clerk Dashboard → Configure → Domains
-  - `https://deductoapp.com`, `https://deducto-paul-landers-projects.vercel.app`
+  - `https://deductoapp.com`, `https://www.deductoapp.com`, `https://deducto-paul-landers-projects.vercel.app`
 - **Note**: Vercel has "Vercel Authentication" protection enabled — disable in Project Settings → Deployment Protection for public access
   - **Custom domain (e.g. deducto.com)**: If testers see "server can't be found" on the custom domain while the Vercel URL works, see [docs/CUSTOM-DOMAIN.md](docs/CUSTOM-DOMAIN.md) for step-by-step DNS and Clerk setup.
 
@@ -83,7 +84,7 @@
 - **Tag System**: Tag CRUD in settings, tag selection on expenses, tag filter on expense list
 - **Reimbursement Workflow**: Interactive status dropdown, amount/date fields, status filter
 - **Bulk Operations**: Multi-select checkboxes, bulk delete, bulk categorize toolbar
-- **Mileage Tracking**: Full CRUD routes, IRS $0.70/mile rate, summary cards, trip form/list
+- **Mileage Tracking**: Full CRUD routes, year-based IRS rates (2024: $0.67, 2025: $0.70, 2026: $0.725), summary cards, trip form/list
 - **Budget Tracking**: CRUD routes, budget status (actual vs budget), progress bars on dashboard (green/yellow/red)
 - **PDF Viewer**: Clean iframe-based PDF preview on receipt review (no toolbar/sidebar)
 - **Receipt Management**: Dedicated receipt review page, batch drag-and-drop upload, receipt deletion
@@ -98,7 +99,7 @@
 - **Mileage project field**: Project selector (required) on mileage form; project badge shown on trip list entries
 - **Saved Locations**: `SavedLocation` model + `/api/v1/saved-locations` CRUD; manage in Settings; quick-fill chips in mileage form
 - **Capital Expense flag**: `isCapitalExpense` boolean on Expense model — checkbox in expense form, badge in expense detail
-- **Sidebar reorder**: Dashboard → Projects → Expenses → Deposits → Mileage → (Tools) Upload, Review, Reports
+- **Navigation**: Sidebar removed from Layout. Desktop nav is Header icons (Reports, Settings) only; content-level links drive deeper navigation. Mobile uses bottom `MobileNav` (Home, Scan, Reports, Settings). `Sidebar.tsx` is dead code.
 - **Logo**: Deducto logo (emerald “D” + minus) as favicon, sidebar icon, and dashboard hero; PWA icons in `client/public/icons/`
 - **Deployment**: Vercel (client) + Railway (server + PostgreSQL) — both live in production
 
@@ -109,3 +110,14 @@
 - **Stats API**: `GET /api/v1/stats` (auth required) returns `{ users, projects, expenses }` for dashboards or monitoring.
 - **Vercel Analytics**: `@vercel/analytics` and `<Analytics />` in the client; view in Vercel project → Analytics.
 - **X-Frame-Options**: Set to `DENY` for the app; skipped for receipt file and preview URLs so PDFs can load in iframes on the receipt review page.
+
+### Phase 8: UI Polish, Mileage Enhancements, Receipt Workflow (Mar 2026)
+- **Receipt workflow overhaul**: Replaced dedicated receipt review page with inline flag + modal workflow. Scanned receipts auto-create draft expenses and flag incomplete ones for user review.
+- **Mileage flags**: `taxDeductible` (default true) and `reimbursable` (default false) boolean fields added to `MileageEntry`; shown in mileage form and trip list.
+- **Address autocomplete**: `AddressAutocomplete` component (`client/src/components/ui/address-autocomplete.tsx`) used in mileage form start/end fields and saved locations — powered by Nominatim, no API key required.
+- **Route map**: After calculating a mileage route, an interactive map (`RouteMap.tsx`) is displayed inline using Leaflet.
+- **Clerk hash routing**: `SignIn` component uses `routing="hash"` in `main.tsx` to prevent sign-up navigation from conflicting with `BrowserRouter`.
+- **CORS**: `www.deductoapp.com` added to allowed origins on the server alongside `deductoapp.com`.
+- **Legal pages**: `/privacy`, `/terms`, `/security` routes added (`client/src/components/legal/`).
+- **Layout additions**: `ErrorBoundary`, `ApiStatusBanner` (shows when server is unreachable), and `AppFooter` added to the Layout wrapper.
+- **Security hardening**: Various server-side security improvements (input validation, rate limiting, header hardening).

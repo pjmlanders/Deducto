@@ -167,6 +167,9 @@ export const receiptsApi = {
   list: (params: { status?: string } = {}) =>
     api.get<Receipt[]>('/receipts', { params }).then((r) => r.data),
 
+  issuesCount: () =>
+    api.get<{ count: number }>('/receipts/issues-count').then((r) => r.data.count),
+
   upload: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -184,6 +187,20 @@ export const receiptsApi = {
   getFileUrl: (id: string) => `${API_BASE}/receipts/${id}/file`,
 
   getPreviewUrl: (id: string) => `${API_BASE}/receipts/${id}/preview`,
+
+  /** Fetch a receipt file with auth and open it in a new tab via a blob URL. */
+  openFile: async (id: string) => {
+    const r = await api.get(`/receipts/${id}/file`, { responseType: 'blob' });
+    const url = URL.createObjectURL(r.data);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  },
+
+  /** Fetch a receipt file with auth and return a blob URL (caller must revoke). */
+  fetchBlobUrl: async (path: string) => {
+    const r = await api.get(path, { responseType: 'blob' });
+    return URL.createObjectURL(r.data);
+  },
 
   process: (id: string) =>
     api.post(`/receipts/${id}/process`).then((r) => r.data),
@@ -230,7 +247,7 @@ export const mileageApi = {
   get: (id: string) =>
     api.get<MileageEntry>(`/mileage/${id}`).then((r) => r.data),
 
-  create: (data: { date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip?: boolean; taxDeductible?: boolean; reimbursable?: boolean; tagIds?: string[]; notes?: string }) =>
+  create: (data: { date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip?: boolean; returnDate?: string; categoryId?: string; taxDeductible?: boolean; reimbursable?: boolean; tagIds?: string[]; notes?: string }) =>
     api.post<MileageEntry>('/mileage', data).then((r) => r.data),
 
   update: (id: string, data: Partial<{ date: string; startLocation: string; endLocation: string; distance: number; purpose: string; projectId: string; roundTrip: boolean; taxDeductible: boolean; reimbursable: boolean; tagIds: string[]; notes: string }>) =>

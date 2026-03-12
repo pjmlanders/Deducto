@@ -1,8 +1,9 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BarChart3, Settings, User } from 'lucide-react';
+import { BarChart3, Settings, User, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useReceiptIssueCount } from '@/hooks/useReceipts';
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -21,6 +22,8 @@ const ClerkUserButton = CLERK_KEY
   : null;
 
 export function Header() {
+  const { data: issueCount = 0 } = useReceiptIssueCount();
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-sm px-4 lg:px-6">
       {/* Logo / home link */}
@@ -31,6 +34,19 @@ export function Header() {
 
       {/* Right side nav */}
       <div className="flex items-center gap-1">
+        {issueCount > 0 && (
+          <NavLink to="/receipts">
+            {({ isActive }) => (
+              <Button variant="ghost" size="icon" className={cn('relative', isActive && 'text-primary bg-primary/5')}>
+                <ScanLine className="h-5 w-5 text-destructive" />
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+                  {issueCount > 9 ? '9+' : issueCount}
+                </span>
+                <span className="sr-only">Receipt issues ({issueCount})</span>
+              </Button>
+            )}
+          </NavLink>
+        )}
         <NavLink to="/reports">
           {({ isActive }) => (
             <Button variant="ghost" size="icon" className={cn(isActive && 'text-primary bg-primary/5')}>
