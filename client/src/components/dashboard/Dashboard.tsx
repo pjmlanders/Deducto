@@ -74,6 +74,7 @@ export function Dashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
 
   const handleCreateProject = async () => {
     if (!newName.trim()) return;
@@ -90,6 +91,12 @@ export function Dashboard() {
       month: selectedMonth,
       projectId: selectedProjectId || undefined,
     }),
+  });
+
+  const { data: yearly, isLoading: yearlyLoading } = useQuery({
+    queryKey: ['reports', 'yearly', selectedYear, selectedProjectId],
+    queryFn: () => reportsApi.yearly({ year: selectedYear, projectId: selectedProjectId || undefined }),
+    enabled: viewMode === 'year',
   });
 
   const { data: projects } = useProjects();
@@ -111,8 +118,14 @@ export function Dashboard() {
   const projectList = Array.isArray(projects?.data) ? projects.data : [];
   const trendData = Array.isArray(trend) ? trend : [];
   const budgetStatusList = Array.isArray(budgetStatus) ? budgetStatus : [];
-  const categoryBreakdown = Array.isArray(monthly?.categoryBreakdown) ? monthly.categoryBreakdown : [];
-  const dailySpending = Array.isArray(monthly?.dailySpending) ? monthly.dailySpending : [];
+
+  const activeData = viewMode === 'year' ? yearly : monthly;
+  const activeLoading = viewMode === 'year' ? yearlyLoading : isLoading;
+  const categoryBreakdown = Array.isArray(activeData?.categoryBreakdown) ? activeData.categoryBreakdown : [];
+  // Year mode: monthlySpending is the bar chart data; month mode: dailySpending
+  const dailySpending = viewMode === 'year'
+    ? (Array.isArray((yearly as any)?.monthlySpending) ? (yearly as any).monthlySpending : [])
+    : (Array.isArray(monthly?.dailySpending) ? monthly.dailySpending : []);
   const topVendors = Array.isArray(monthly?.topVendors) ? monthly.topVendors : [];
 
   return (
@@ -120,26 +133,51 @@ export function Dashboard() {
       {/* Page header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Month selector */}
-          <div className="flex items-center rounded-md border overflow-hidden text-sm">
+          {/* Month / Year toggle */}
+          <div className="flex rounded-md border overflow-hidden text-sm font-medium">
             <button
-              className="px-2 py-1 hover:bg-muted transition-colors"
-              onClick={() => {
-                if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear((y) => y - 1); }
-                else setSelectedMonth((m) => m - 1);
-              }}
-            >‹</button>
-            <span className="px-3 py-1 font-medium text-sm min-w-[110px] text-center">
-              {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
-            </span>
+              className={`px-3 py-1.5 transition-colors ${viewMode === 'month' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+              onClick={() => setViewMode('month')}
+            >Month</button>
             <button
-              className="px-2 py-1 hover:bg-muted transition-colors"
-              onClick={() => {
-                if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear((y) => y + 1); }
-                else setSelectedMonth((m) => m + 1);
-              }}
-            >›</button>
+              className={`px-3 py-1.5 transition-colors ${viewMode === 'year' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+              onClick={() => setViewMode('year')}
+            >Year</button>
           </div>
+          {/* Period navigator */}
+          {viewMode === 'month' ? (
+            <div className="flex items-center rounded-md border overflow-hidden text-sm">
+              <button
+                className="px-2 py-1 hover:bg-muted transition-colors"
+                onClick={() => {
+                  if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear((y) => y - 1); }
+                  else setSelectedMonth((m) => m - 1);
+                }}
+              >‹</button>
+              <span className="px-3 py-1 font-medium text-sm min-w-[110px] text-center">
+                {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                className="px-2 py-1 hover:bg-muted transition-colors"
+                onClick={() => {
+                  if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear((y) => y + 1); }
+                  else setSelectedMonth((m) => m + 1);
+                }}
+              >›</button>
+            </div>
+          ) : (
+            <div className="flex items-center rounded-md border overflow-hidden text-sm">
+              <button
+                className="px-2 py-1 hover:bg-muted transition-colors"
+                onClick={() => setSelectedYear((y) => y - 1)}
+              >‹</button>
+              <span className="px-3 py-1 font-medium text-sm min-w-[50px] text-center">{selectedYear}</span>
+              <button
+                className="px-2 py-1 hover:bg-muted transition-colors"
+                onClick={() => setSelectedYear((y) => y + 1)}
+              >›</button>
+            </div>
+          )}
           {/* Project filter */}
           <select
             className="h-8 rounded-md border px-2 text-sm bg-background"
@@ -244,10 +282,10 @@ export function Dashboard() {
                 </div>
               </div>
               <div className="text-3xl font-bold tracking-tight text-red-600 mt-1">
-                {isLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(monthly?.expenses?.total || 0)}
+                {activeLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(activeData?.expenses?.total || 0)}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                {isLoading ? <Skeleton className="h-3 w-20" /> : `${monthly?.expenses?.count || 0} transactions`}
+                {activeLoading ? <Skeleton className="h-3 w-20" /> : `${activeData?.expenses?.count || 0} transactions`}
               </div>
             </CardContent>
           </Card>
@@ -263,10 +301,10 @@ export function Dashboard() {
                 </div>
               </div>
               <div className="text-3xl font-bold tracking-tight text-green-600 mt-1">
-                {isLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(monthly?.deposits?.total || 0)}
+                {activeLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(activeData?.deposits?.total || 0)}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                {isLoading ? <Skeleton className="h-3 w-16" /> : `${monthly?.deposits?.count || 0} deposits`}
+                {activeLoading ? <Skeleton className="h-3 w-16" /> : `${activeData?.deposits?.count || 0} deposits`}
               </div>
             </CardContent>
           </Card>
@@ -280,11 +318,11 @@ export function Dashboard() {
                 <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               </div>
             </div>
-            <div className={`text-3xl font-bold tracking-tight mt-1 ${(monthly?.net || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {isLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(monthly?.net || 0)}
+            <div className={`text-3xl font-bold tracking-tight mt-1 ${(activeData?.net || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {activeLoading ? <Skeleton className="h-9 w-28" /> : formatCurrency(activeData?.net || 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'short', year: 'numeric' })}
+              {viewMode === 'year' ? selectedYear : new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'short', year: 'numeric' })}
             </p>
           </CardContent>
         </Card>
@@ -356,18 +394,24 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Daily Spending Bar Chart */}
+          {/* Daily / Monthly Spending Bar Chart */}
           {dailySpending.length > 0 && (
             <Card className="min-w-0 overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-lg">Daily Spending</CardTitle>
+                <CardTitle className="text-lg">{viewMode === 'year' ? 'Monthly Spending' : 'Daily Spending'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={dailySpending.map((d: any) => ({
-                    day: new Date(d.day).getDate(),
-                    total: Number(d.total) || 0,
-                  }))}>
+                  <BarChart data={viewMode === 'year'
+                    ? dailySpending.map((d: any) => ({
+                        day: monthNames[Number(d.month) - 1],
+                        total: Number(d.total) || 0,
+                      }))
+                    : dailySpending.map((d: any) => ({
+                        day: new Date(d.day).getDate(),
+                        total: Number(d.total) || 0,
+                      }))
+                  }>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -498,8 +542,8 @@ export function Dashboard() {
         </Card>
       )}
 
-      {/* Budget Progress */}
-      {budgetStatusList.length > 0 && (
+      {/* Budget Progress — month view only */}
+      {viewMode === 'month' && budgetStatusList.length > 0 && (
         <Link to="/settings" className="block">
           <Card className="cursor-pointer hover:shadow-md transition-shadow">
           <CardHeader>
@@ -639,7 +683,7 @@ export function Dashboard() {
       </Dialog>
 
       {/* Quick Actions for empty state */}
-      {!isLoading && (!monthly?.expenses?.count) && (
+      {!activeLoading && (!activeData?.expenses?.count) && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
