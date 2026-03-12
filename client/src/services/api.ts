@@ -287,7 +287,7 @@ export const reportsApi = {
   categoryBreakdown: (params: { projectId?: string; dateFrom?: string; dateTo?: string } = {}) =>
     api.get('/reports/category-breakdown', { params }).then((r) => r.data),
 
-  trend: (params: { months?: number; projectId?: string } = {}) =>
+  trend: (params: { months?: number; projectId?: string; endYear?: number; endMonth?: number } = {}) =>
     api.get('/reports/trend', { params }).then((r) => r.data),
 
   exportCsv: async (params: { year?: number; month?: number; projectId?: string } = {}) => {

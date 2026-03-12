@@ -353,15 +353,19 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // Spending trend (last N months)
+  // Spending trend (last N months, optionally anchored to a specific end month)
   fastify.get('/reports/trend', async (request) => {
     const query = request.query as Record<string, string>;
     const months = parseInt(query.months) || 12;
     const projectId = query.projectId;
+    const endYear = parseInt(query.endYear);
+    const endMonth = parseInt(query.endMonth);
 
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - months);
+    // Anchor to the specified end month/year, or fall back to today
+    const endDate = endYear && endMonth
+      ? new Date(endYear, endMonth, 0, 23, 59, 59) // last moment of endMonth
+      : new Date();
+    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - months, 1);
 
     const trend = await fastify.prisma.$queryRaw`
       SELECT

@@ -24,7 +24,7 @@ import { PROJECT_COLORS } from '@/lib/constants';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  LineChart, Line, Legend,
+  LineChart, Line,
 } from 'recharts';
 
 const CHART_COLORS = [
@@ -69,8 +69,6 @@ export function Dashboard() {
   const [newColor, setNewColor] = useState('#3b82f6');
   const createProject = useCreateProject();
 
-  const [trendWindow, setTrendWindow] = useState<'ytd' | '6' | '12' | '24'>('12');
-  const [trendYoY, setTrendYoY] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
@@ -103,15 +101,15 @@ export function Dashboard() {
 
   const { data: budgetStatus } = useBudgetStatus(selectedYear, selectedMonth);
 
-  const trendFetchMonths = trendYoY
-    ? 24
-    : trendWindow === 'ytd'
-    ? currentDate.getMonth() + 2
-    : parseInt(trendWindow);
-
+  // Trend: 12 months ending at selected month (month mode) or 5 years ending at selected year (year mode)
   const { data: trend } = useQuery({
-    queryKey: ['reports', 'trend', trendFetchMonths, selectedProjectId],
-    queryFn: () => reportsApi.trend({ months: trendFetchMonths, projectId: selectedProjectId || undefined }),
+    queryKey: ['reports', 'trend', viewMode, selectedYear, selectedMonth, selectedProjectId],
+    queryFn: () => reportsApi.trend({
+      months: viewMode === 'year' ? 60 : 12,
+      projectId: selectedProjectId || undefined,
+      endYear: selectedYear,
+      endMonth: viewMode === 'year' ? 12 : selectedMonth,
+    }),
   });
 
   // Guard against unexpected API responses (e.g. when backend URL is missing in production)
@@ -395,7 +393,7 @@ export function Dashboard() {
           </Card>
 
           {/* Daily / Monthly Spending Bar Chart */}
-          {dailySpending.length > 0 && (
+          {(viewMode === 'year' || dailySpending.length > 0) && (
             <Card className="min-w-0 overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-lg">{viewMode === 'year' ? 'Monthly Spending' : 'Daily Spending'}</CardTitle>
@@ -403,10 +401,10 @@ export function Dashboard() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={viewMode === 'year'
-                    ? dailySpending.map((d: any) => ({
-                        day: monthNames[Number(d.month) - 1],
-                        total: Number(d.total) || 0,
-                      }))
+                    ? monthNames.map((name, i) => {
+                        const found = dailySpending.find((d: any) => Number(d.month) === i + 1);
+                        return { day: name, total: found ? Number(found.total) : 0 };
+                      })
                     : dailySpending.map((d: any) => ({
                         day: new Date(d.day).getDate(),
                         total: Number(d.total) || 0,
@@ -429,93 +427,41 @@ export function Dashboard() {
       {trendData.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-lg">Spending Trend</CardTitle>
-              <div className="flex items-center gap-2">
-                {/* Time frame selector */}
-                <div className="flex rounded-md border overflow-hidden text-xs font-medium">
-                  {(['ytd', '6', '12', '24'] as const).map((w) => (
-                    <button
-                      key={w}
-                      onClick={() => setTrendWindow(w)}
-                      className={`px-2.5 py-1 transition-colors ${
-                        trendWindow === w
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-background hover:bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {w === 'ytd' ? 'YTD' : `${w}M`}
-                    </button>
-                  ))}
-                </div>
-                {/* YoY toggle */}
-                <button
-                  onClick={() => setTrendYoY((v) => !v)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors ${
-                    trendYoY
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background hover:bg-muted text-muted-foreground border-border'
-                  }`}
-                >
-                  YoY
-                </button>
-              </div>
-            </div>
+            <CardTitle className="text-lg">
+              {viewMode === 'year' ? 'Year-Over-Year Spending' : '12-Month Spending Trend'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {trendYoY ? (() => {
-              // Group by year for multi-line YoY chart
-              const years = [...new Set(trendData.map((d: any) => Number(d.year)))].sort();
-              const currentMonth = currentDate.getMonth() + 1;
-              const monthsToShow = trendWindow === 'ytd'
-                ? Array.from({ length: currentMonth }, (_, i) => i + 1)
-                : Array.from({ length: 12 }, (_, i) => i + 1);
-              const YOY_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
-              const chartData = monthsToShow.map((mo) => {
-                const row: Record<string, string | number | null> = { month: monthNames[mo - 1] };
-                years.forEach((yr) => {
-                  const pt = trendData.find((d: any) => Number(d.year) === yr && Number(d.month) === mo);
-                  row[`y${yr}`] = pt != null ? (Number(pt.total) || 0) : null;
-                });
-                return row;
+            {viewMode === 'year' ? (() => {
+              // Aggregate trend data by year for a bar chart
+              const yearMap = new Map<number, number>();
+              trendData.forEach((d: any) => {
+                const yr = Number(d.year);
+                yearMap.set(yr, (yearMap.get(yr) || 0) + (Number(d.total) || 0));
+              });
+              // Show up to 5 years ending at selectedYear
+              const chartData = Array.from({ length: 5 }, (_, i) => {
+                const yr = selectedYear - 4 + i;
+                return { year: String(yr), total: yearMap.get(yr) || 0 };
               });
               return (
                 <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={chartData}>
+                  <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <XAxis dataKey="year" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    {years.map((yr, i) => (
-                      <Line
-                        key={yr}
-                        type="monotone"
-                        dataKey={`y${yr}`}
-                        name={String(yr)}
-                        stroke={YOY_COLORS[i % YOY_COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        connectNulls={false}
-                      />
-                    ))}
-                  </LineChart>
+                    <Bar
+                      dataKey="total"
+                      radius={[6, 6, 0, 0]}
+                      fill="#3b82f6"
+                    />
+                  </BarChart>
                 </ResponsiveContainer>
               );
             })() : (() => {
-              // Single-line chart filtered to window
-              const currentYear = currentDate.getFullYear();
-              let filtered = trendData;
-              if (trendWindow === 'ytd') {
-                filtered = trendData.filter((d: any) => Number(d.year) === currentYear);
-              } else if (trendWindow === '6') {
-                const cutoff = new Date(currentDate);
-                cutoff.setMonth(cutoff.getMonth() - 6);
-                filtered = trendData.filter(
-                  (d: any) => new Date(Number(d.year), Number(d.month) - 1) > cutoff
-                );
-              }
-              const chartData = filtered.map((t: any) => ({
+              // Rolling 12-month line chart ending at selectedYear/selectedMonth
+              const chartData = trendData.map((t: any) => ({
                 label: `${monthNames[Number(t.month) - 1]} ${String(t.year).slice(2)}`,
                 total: Number(t.total) || 0,
               }));
