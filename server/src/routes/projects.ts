@@ -20,7 +20,44 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.project.count({ where }),
     ]);
 
-    return paginatedResponse(projects, total, { page, limit });
+    // Bulk-fetch expense and deposit totals for all returned projects (2 queries, no N+1)
+    const projectIds = projects.map((p) => p.id);
+    const [expenseTotals, depositTotals] = await Promise.all([
+      fastify.prisma.expense.groupBy({
+        by: ['projectId'],
+        where: { userId: request.userId, projectId: { in: projectIds } },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      fastify.prisma.deposit.groupBy({
+        by: ['projectId'],
+        where: { userId: request.userId, projectId: { in: projectIds } },
+        _sum: { amount: true },
+        _count: true,
+      }),
+    ]);
+
+    const expenseMap = new Map(expenseTotals.map((e) => [e.projectId, e]));
+    const depositMap = new Map(depositTotals.map((d) => [d.projectId, d]));
+
+    const projectsWithSummary = projects.map((p) => {
+      const exp = expenseMap.get(p.id);
+      const dep = depositMap.get(p.id);
+      const totalExpenses = Number(exp?._sum.amount || 0);
+      const totalDeposits = Number(dep?._sum.amount || 0);
+      return {
+        ...p,
+        summary: {
+          totalExpenses,
+          expenseCount: exp?._count || 0,
+          totalDeposits,
+          depositCount: dep?._count || 0,
+          netBalance: totalDeposits - totalExpenses,
+        },
+      };
+    });
+
+    return paginatedResponse(projectsWithSummary, total, { page, limit });
   });
 
   // Get project by ID with summary stats
