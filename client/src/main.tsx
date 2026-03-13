@@ -44,7 +44,7 @@ function AppWithAuth() {
 }
 
 const ClerkApp = React.lazy(async () => {
-  const { ClerkProvider, SignedIn, SignedOut, SignIn, SignUp, useAuth } = await import('@clerk/clerk-react');
+  const { ClerkProvider, SignedIn, SignedOut, SignIn, SignUp, RedirectToSignIn, useAuth } = await import('@clerk/clerk-react');
   const { Routes, Route } = await import('react-router-dom');
   const { setAuthTokenGetter } = await import('./services/api');
 
@@ -69,6 +69,14 @@ const ClerkApp = React.lazy(async () => {
         <SignedOut>
           <Routes>
             <Route
+              path="/sign-in/*"
+              element={
+                <div className={authPageClass}>
+                  <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
+                </div>
+              }
+            />
+            <Route
               path="/sign-up/*"
               element={
                 <div className={authPageClass}>
@@ -76,14 +84,7 @@ const ClerkApp = React.lazy(async () => {
                 </div>
               }
             />
-            <Route
-              path="*"
-              element={
-                <div className={authPageClass}>
-                  <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
-                </div>
-              }
-            />
+            <Route path="*" element={<RedirectToSignIn />} />
           </Routes>
         </SignedOut>
       </>
