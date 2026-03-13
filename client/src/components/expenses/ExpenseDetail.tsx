@@ -15,8 +15,8 @@ import {
 import { formatCurrency, formatDate, formatDateInput } from '@/lib/utils';
 import { ArrowLeft, Edit, Trash2, Receipt, ExternalLink } from 'lucide-react';
 import { REIMBURSEMENT_STATUSES } from '@/lib/constants';
-import { receiptsApi } from '@/services/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ReceiptViewerSheet } from '@/components/receipts/ReceiptViewerSheet';
 
 export function ExpenseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +26,7 @@ export function ExpenseDetail() {
   const updateReimbursement = useUpdateReimbursement();
   const [editingReimb, setEditingReimb] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [viewerReceipt, setViewerReceipt] = useState<{ id: string; mimeType: string; originalName?: string } | null>(null);
 
   if (isLoading) {
     return <div className="animate-pulse space-y-4 max-w-2xl mx-auto">
@@ -222,7 +223,7 @@ export function ExpenseDetail() {
                 {(expense.receipts?.length ? expense.receipts : expense.receipt ? [expense.receipt] : []).map((r) => (
                   <li key={r.id}>
                     <button
-                      onClick={() => receiptsApi.openFile(r.id)}
+                      onClick={() => setViewerReceipt({ id: r.id, mimeType: (r as any).mimeType ?? 'image/jpeg', originalName: (r as any).originalName })}
                       className="text-sm text-primary hover:underline flex items-center gap-1"
                     >
                       <Receipt className="h-4 w-4 shrink-0" />
@@ -249,6 +250,14 @@ export function ExpenseDetail() {
         description="This will permanently delete this expense. This action cannot be undone."
         onConfirm={handleDelete}
         isPending={deleteExpense.isPending}
+      />
+
+      <ReceiptViewerSheet
+        receiptId={viewerReceipt?.id ?? null}
+        mimeType={viewerReceipt?.mimeType}
+        title={viewerReceipt?.originalName ?? 'Receipt'}
+        open={!!viewerReceipt}
+        onOpenChange={(open) => { if (!open) setViewerReceipt(null); }}
       />
     </div>
   );

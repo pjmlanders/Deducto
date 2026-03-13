@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Check, ExternalLink, AlertTriangle, RefreshCw } from 'lucide-react';
-import { receiptsApi } from '@/services/api';
+import { ReceiptViewerSheet } from './ReceiptViewerSheet';
 import { formatDateInput } from '@/lib/utils';
 import type { Receipt } from '@/types';
 
@@ -31,6 +31,8 @@ export function ReceiptAcceptModal({ receipt, projectId, open, onOpenChange }: P
   const { data: categories } = useCategories();
   const acceptReceipt = useAcceptReceipt();
   const processReceipt = useProcessReceipt();
+
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const [form, setForm] = useState({
     projectId: projectId || '',
@@ -116,20 +118,30 @@ export function ReceiptAcceptModal({ receipt, projectId, open, onOpenChange }: P
         <div className="rounded border overflow-hidden bg-gray-50">
           {isPdf ? (
             <button
-              onClick={() => receiptsApi.openFile(receipt.id)}
+              onClick={() => setViewerOpen(true)}
               className="flex items-center gap-2 p-3 text-sm text-primary hover:underline"
             >
               <ExternalLink className="h-4 w-4" />
               View PDF receipt
             </button>
           ) : (
-            <img
-              src={previewBlobUrl ?? undefined}
-              alt="Receipt"
-              className="w-full max-h-48 object-contain"
-            />
+            <button onClick={() => setViewerOpen(true)} className="w-full">
+              <img
+                src={previewBlobUrl ?? undefined}
+                alt="Receipt"
+                className="w-full max-h-48 object-contain hover:opacity-90 transition-opacity"
+              />
+            </button>
           )}
         </div>
+
+        <ReceiptViewerSheet
+          receiptId={receipt.id}
+          mimeType={receipt.mimeType}
+          title={receipt.originalName ?? 'Receipt'}
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+        />
 
         {/* Retry button for failed receipts */}
         {isFailed && (
