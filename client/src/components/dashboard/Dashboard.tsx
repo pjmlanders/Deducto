@@ -17,7 +17,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { formatCurrency } from '@/lib/utils';
-import { DollarSign, TrendingDown, TrendingUp, Receipt, FolderOpen, ArrowUpDown, Target, Plus } from 'lucide-react';
+import { DollarSign, TrendingDown, TrendingUp, Receipt, FolderOpen, ArrowUpDown, Target, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link, useNavigate } from 'react-router-dom';
 import { PROJECT_COLORS } from '@/lib/constants';
@@ -152,9 +153,50 @@ export function Dashboard() {
                   else setSelectedMonth((m) => m - 1);
                 }}
               >‹</button>
-              <span className="px-3 py-1 font-medium text-sm min-w-[110px] text-center">
-                {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="px-3 py-1 font-medium text-sm min-w-[110px] text-center hover:bg-muted transition-colors">
+                    {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3">
+                  {/* Year row */}
+                  <div className="flex items-center justify-between mb-3">
+                    <button
+                      className="p-1 rounded hover:bg-muted transition-colors"
+                      onClick={() => setSelectedYear((y) => y - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="font-semibold text-sm">{selectedYear}</span>
+                    <button
+                      className="p-1 rounded hover:bg-muted transition-colors"
+                      onClick={() => setSelectedYear((y) => y + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {/* Month grid */}
+                  <div className="grid grid-cols-3 gap-1">
+                    {monthNames.map((name, i) => {
+                      const m = i + 1;
+                      return (
+                        <button
+                          key={name}
+                          className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                            m === selectedMonth
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-muted'
+                          }`}
+                          onClick={() => setSelectedMonth(m)}
+                        >
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <button
                 className="px-2 py-1 hover:bg-muted transition-colors"
                 onClick={() => {
