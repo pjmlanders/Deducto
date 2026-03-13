@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 
 interface ConfirmDialogProps {
@@ -19,6 +21,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   variant?: 'destructive' | 'default';
   isPending?: boolean;
+  /** If provided, the user must type this exact string to enable the confirm button */
+  confirmText?: string;
 }
 
 export function ConfirmDialog({
@@ -30,7 +34,16 @@ export function ConfirmDialog({
   confirmLabel = 'Delete',
   variant = 'destructive',
   isPending = false,
+  confirmText,
 }: ConfirmDialogProps) {
+  const [typed, setTyped] = useState('');
+
+  useEffect(() => {
+    if (!open) setTyped('');
+  }, [open]);
+
+  const confirmed = confirmText ? typed === confirmText : true;
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -38,11 +51,24 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {confirmText && (
+          <div className="py-2">
+            <p className="text-sm text-muted-foreground mb-2">
+              Type <span className="font-semibold text-foreground">{confirmText}</span> to confirm:
+            </p>
+            <Input
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              placeholder={confirmText}
+              autoFocus
+            />
+          </div>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            disabled={isPending}
+            disabled={isPending || !confirmed}
             className={
               variant === 'destructive'
                 ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'

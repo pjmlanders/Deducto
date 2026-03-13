@@ -159,9 +159,8 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: 'Project not found' });
     }
 
-    await fastify.prisma.project.update({
+    await fastify.prisma.project.delete({
       where: { id: request.params.id },
-      data: { isArchived: true, isActive: false },
     });
 
     return { success: true };

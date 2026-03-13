@@ -260,7 +260,8 @@ export function ProjectList() {
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
         title="Delete project?"
-        description="This will permanently delete this project and all its associated expenses. This action cannot be undone."
+        description="This will permanently delete this project along with all its expenses, deposits, receipts, and mileage entries. This cannot be undone."
+        confirmText={projectList.find((p) => p.id === deleteId)?.name}
         onConfirm={() => { deleteProject.mutate(deleteId!); setDeleteId(null); }}
         isPending={deleteProject.isPending}
       />

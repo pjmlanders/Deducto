@@ -62,14 +62,17 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       request.userEmail = (payload as any).email || '';
 
       // Upsert user in database
+      // Clerk JWTs don't always include email (e.g. OAuth flows), so fall back to a
+      // unique placeholder so the @unique constraint on User.email doesn't conflict.
+      const emailForCreate = request.userEmail || `user-${payload.sub}@placeholder.local`;
       await fastify.prisma.user.upsert({
         where: { id: payload.sub },
         update: {
-          email: request.userEmail,
+          ...(request.userEmail && { email: request.userEmail }),
         },
         create: {
           id: payload.sub,
-          email: request.userEmail,
+          email: emailForCreate,
           name: (payload as any).name || null,
         },
       });

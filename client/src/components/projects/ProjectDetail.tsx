@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useProject, useUpdateProject } from '@/hooks/useProjects';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useProject, useUpdateProject, useDeleteProject } from '@/hooks/useProjects';
 import { useExpenses } from '@/hooks/useExpenses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,20 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { ArrowLeft, FileSearch, TrendingDown, TrendingUp, DollarSign, Camera, Receipt, Car, Pencil } from 'lucide-react';
+import { ArrowLeft, FileSearch, TrendingDown, TrendingUp, DollarSign, Camera, Receipt, Car, Pencil, Trash2 } from 'lucide-react';
 import { PROJECT_COLORS } from '@/lib/constants';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: project, isLoading } = useProject(id);
   const { data: expenses } = useExpenses({ projectId: id, limit: 10 });
   const updateProject = useUpdateProject();
+  const deleteProject = useDeleteProject();
   const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editColor, setEditColor] = useState('#3b82f6');
@@ -70,6 +74,9 @@ export function ProjectDetail() {
         </div>
         <Button variant="ghost" size="icon" onClick={openEdit}>
           <Pencil className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => setShowDelete(true)}>
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
@@ -217,6 +224,20 @@ export function ProjectDetail() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={showDelete}
+        onOpenChange={setShowDelete}
+        title="Delete project?"
+        description="This will permanently delete this project along with all its expenses, deposits, receipts, and mileage entries. This cannot be undone."
+        confirmText={project?.name}
+        onConfirm={() => {
+          deleteProject.mutate(project!.id, {
+            onSuccess: () => navigate('/projects'),
+          });
+        }}
+        isPending={deleteProject.isPending}
+      />
 
       {/* Edit Project Dialog */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
