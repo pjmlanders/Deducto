@@ -305,6 +305,9 @@ export const reportsApi = {
   trend: (params: { months?: number; projectId?: string; endYear?: number; endMonth?: number } = {}) =>
     api.get('/reports/trend', { params }).then((r) => r.data),
 
+  availableYears: () =>
+    api.get<{ years: number[] }>('/reports/available-years').then((r) => r.data.years),
+
   exportCsv: async (params: { year?: number; month?: number; projectId?: string } = {}) => {
     const response = await api.get('/reports/export/csv', {
       params,

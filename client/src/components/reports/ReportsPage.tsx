@@ -54,6 +54,14 @@ export function ReportsPage() {
   const [view, setView] = useState<'monthly' | 'yearly' | 'tax'>('monthly');
 
   const { data: projects } = useProjects();
+  const { data: availableYears } = useQuery({
+    queryKey: ['reports', 'available-years'],
+    queryFn: () => reportsApi.availableYears(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const yearOptions = availableYears && availableYears.length > 0
+    ? availableYears
+    : [now.getFullYear()];
 
   const { data: monthly } = useQuery({
     queryKey: ['reports', 'monthly', year, month, projectId],
@@ -132,7 +140,7 @@ export function ReportsPage() {
         <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
           <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {[2024, 2025, 2026].map((y) => (
+            {yearOptions.map((y) => (
               <SelectItem key={y} value={String(y)}>{y}</SelectItem>
             ))}
           </SelectContent>

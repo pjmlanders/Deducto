@@ -572,6 +572,40 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       .header('Content-Length', String(pdfBuffer.length));
     return reply.send(pdfBuffer);
   });
+  // Available years — oldest expense/deposit/mileage year to current year
+  fastify.get('/reports/available-years', async (request) => {
+    const userId = request.userId;
+    const currentYear = new Date().getFullYear();
+
+    const [oldestExpense, oldestDeposit, oldestMileage] = await Promise.all([
+      fastify.prisma.expense.findFirst({
+        where: { userId },
+        orderBy: { date: 'asc' },
+        select: { date: true },
+      }),
+      fastify.prisma.deposit.findFirst({
+        where: { userId },
+        orderBy: { date: 'asc' },
+        select: { date: true },
+      }),
+      fastify.prisma.mileageEntry.findFirst({
+        where: { userId },
+        orderBy: { date: 'asc' },
+        select: { date: true },
+      }),
+    ]);
+
+    const dates = [oldestExpense?.date, oldestDeposit?.date, oldestMileage?.date]
+      .filter(Boolean) as Date[];
+
+    const oldestYear = dates.length > 0
+      ? Math.min(...dates.map((d) => new Date(d).getFullYear()))
+      : currentYear;
+
+    const years: number[] = [];
+    for (let y = currentYear; y >= oldestYear; y--) years.push(y);
+    return { years };
+  });
 };
 
 export default reportRoutes;
