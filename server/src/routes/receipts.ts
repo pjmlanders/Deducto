@@ -56,7 +56,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         storagePath: filePath,
         storageType: 'local',
         processingStatus: 'pending',
-        fileData: buffer,
+        fileData: buffer as unknown as Uint8Array<ArrayBuffer>,
       },
     });
 
@@ -104,7 +104,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         storagePath: filePath,
         storageType: 'local',
         processingStatus: 'pending',
-        fileData: buffer,
+        fileData: buffer as unknown as Uint8Array<ArrayBuffer>,
       },
     });
 
@@ -442,13 +442,13 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
 // Compress images before storage — PDFs passed through unchanged
 async function compressImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; mimeType: string }> {
   if (mimeType === 'application/pdf') {
-    return { buffer, mimeType };
+    return { buffer: Buffer.from(buffer), mimeType };
   }
   const compressed = await sharp(buffer)
     .resize(2000, 2000, { fit: 'inside', withoutEnlargement: true })
     .jpeg({ quality: 82 })
     .toBuffer();
-  return { buffer: compressed, mimeType: 'image/jpeg' };
+  return { buffer: Buffer.from(compressed), mimeType: 'image/jpeg' };
 }
 
 // Async receipt processing with Claude AI
