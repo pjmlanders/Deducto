@@ -41,7 +41,8 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Save file
     const buffer = await file.toBuffer();
-    await fs.writeFile(filePath, buffer);
+    // Best-effort disk write (ephemeral on Railway — DB is the source of truth)
+    try { await fs.writeFile(filePath, buffer); } catch { /* ignore */ }
 
     const receipt = await fastify.prisma.receipt.create({
       data: {
@@ -53,6 +54,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         storagePath: filePath,
         storageType: 'local',
         processingStatus: 'pending',
+        fileData: buffer,
       },
     });
 
@@ -85,7 +87,8 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     const fileName = `${crypto.randomUUID()}${ext}`;
     const filePath = path.join(userDir, fileName);
 
-    await fs.writeFile(filePath, buffer);
+    // Best-effort disk write (ephemeral on Railway — DB is the source of truth)
+    try { await fs.writeFile(filePath, buffer); } catch { /* ignore */ }
 
     const receipt = await fastify.prisma.receipt.create({
       data: {
@@ -97,6 +100,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         storagePath: filePath,
         storageType: 'local',
         processingStatus: 'pending',
+        fileData: buffer,
       },
     });
 
@@ -181,6 +185,12 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: 'Receipt not found' });
     }
 
+    // Prefer DB-stored bytes; fall back to disk for legacy receipts
+    if (receipt.fileData) {
+      reply.type(receipt.mimeType);
+      return reply.send(receipt.fileData);
+    }
+
     try {
       await fs.access(receipt.storagePath);
       const stream = createReadStream(receipt.storagePath);
@@ -202,7 +212,13 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const fileBuffer = await fs.readFile(receipt.storagePath);
+      // Prefer DB-stored bytes; fall back to disk for legacy receipts
+      let fileBuffer: Buffer;
+      if (receipt.fileData) {
+        fileBuffer = receipt.fileData as Buffer;
+      } else {
+        fileBuffer = await fs.readFile(receipt.storagePath);
+      }
 
       // Browser-native formats: serve directly (including PDF for <object>/<iframe>)
       const nativeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
@@ -432,7 +448,13 @@ async function processReceiptAsync(
 
     if (!receipt) return;
 
-    const fileBuffer = await (await import('fs/promises')).readFile(receipt.storagePath);
+    // Prefer DB-stored bytes; fall back to disk for legacy receipts
+    let fileBuffer: Buffer;
+    if (receipt.fileData) {
+      fileBuffer = receipt.fileData as Buffer;
+    } else {
+      fileBuffer = await (await import('fs/promises')).readFile(receipt.storagePath);
+    }
 
     // Get user categories for AI context
     const categories = await fastify.prisma.category.findMany({
