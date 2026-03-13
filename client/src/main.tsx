@@ -44,7 +44,7 @@ function AppWithAuth() {
 }
 
 const ClerkApp = React.lazy(async () => {
-  const { ClerkProvider, SignedIn, SignedOut, SignIn, useAuth } = await import('@clerk/clerk-react');
+  const { ClerkProvider, SignedIn, SignedOut, SignIn, SignUp, useAuth } = await import('@clerk/clerk-react');
   const { setAuthTokenGetter } = await import('./services/api');
 
   function AuthBridge({ children }: { children: React.ReactNode }) {
@@ -53,6 +53,21 @@ const ClerkApp = React.lazy(async () => {
       setAuthTokenGetter(getToken);
     }, [getToken]);
     return <>{children}</>;
+  }
+
+  function AuthScreen() {
+    const [hash, setHash] = React.useState(window.location.hash);
+    React.useEffect(() => {
+      const handler = () => setHash(window.location.hash);
+      window.addEventListener('hashchange', handler);
+      return () => window.removeEventListener('hashchange', handler);
+    }, []);
+    const isSignUp = hash.startsWith('#/sign-up');
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        {isSignUp ? <SignUp routing="hash" /> : <SignIn routing="hash" />}
+      </div>
+    );
   }
 
   function ClerkWrapper() {
@@ -66,9 +81,7 @@ const ClerkApp = React.lazy(async () => {
               </AuthBridge>
             </SignedIn>
             <SignedOut>
-              <div className="flex min-h-screen items-center justify-center bg-background">
-                <SignIn routing="hash" />
-              </div>
+              <AuthScreen />
             </SignedOut>
           </BrowserRouter>
         </QueryClientProvider>
