@@ -45,6 +45,7 @@ function AppWithAuth() {
 
 const ClerkApp = React.lazy(async () => {
   const { ClerkProvider, SignedIn, SignedOut, SignIn, SignUp, useAuth } = await import('@clerk/clerk-react');
+  const { Routes, Route } = await import('react-router-dom');
   const { setAuthTokenGetter } = await import('./services/api');
 
   function AuthBridge({ children }: { children: React.ReactNode }) {
@@ -55,36 +56,50 @@ const ClerkApp = React.lazy(async () => {
     return <>{children}</>;
   }
 
-  function AuthScreen() {
-    const [hash, setHash] = React.useState(window.location.hash);
-    React.useEffect(() => {
-      const handler = () => setHash(window.location.hash);
-      window.addEventListener('hashchange', handler);
-      return () => window.removeEventListener('hashchange', handler);
-    }, []);
-    const isSignUp = hash.startsWith('#/sign-up');
+  const authPageClass = 'flex min-h-screen items-center justify-center bg-background';
+
+  function AuthGate() {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        {isSignUp
-          ? <SignUp routing="hash" signInUrl="#/sign-in" />
-          : <SignIn routing="hash" signUpUrl="#/sign-up" />}
-      </div>
+      <>
+        <SignedIn>
+          <AuthBridge>
+            <App />
+          </AuthBridge>
+        </SignedIn>
+        <SignedOut>
+          <Routes>
+            <Route
+              path="/sign-up/*"
+              element={
+                <div className={authPageClass}>
+                  <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
+                </div>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <div className={authPageClass}>
+                  <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
+                </div>
+              }
+            />
+          </Routes>
+        </SignedOut>
+      </>
     );
   }
 
   function ClerkWrapper() {
     return (
-      <ClerkProvider publishableKey={CLERK_KEY!}>
+      <ClerkProvider
+        publishableKey={CLERK_KEY!}
+        signInUrl="/sign-in"
+        signUpUrl="/sign-up"
+      >
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-            <SignedIn>
-              <AuthBridge>
-                <App />
-              </AuthBridge>
-            </SignedIn>
-            <SignedOut>
-              <AuthScreen />
-            </SignedOut>
+            <AuthGate />
           </BrowserRouter>
         </QueryClientProvider>
       </ClerkProvider>
