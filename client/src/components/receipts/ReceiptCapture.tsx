@@ -141,14 +141,22 @@ export function ReceiptCapture() {
       const processed = await pollReceiptStatus(receipt.id);
 
       setWorkingStep('Creating expense...');
+      const expenseData = buildExpenseData(processed, selectedProjectId);
+      // If AI failed, amount will be 0 — skip auto-accept and let user fill in manually
+      if (!expenseData.amount || expenseData.amount <= 0) {
+        navigate(urlProjectId ? `/projects/${urlProjectId}` : '/receipts');
+        toast.info('Receipt uploaded — please review and fill in the details.');
+        return;
+      }
       await acceptReceipt.mutateAsync({
         receiptId: processed.id,
-        ...buildExpenseData(processed, selectedProjectId),
+        ...expenseData,
       });
 
       navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
-    } catch {
-      toast.error('Failed to process receipt. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      toast.error(`Failed to process receipt: ${msg}`);
       setMode('select');
     }
   };
@@ -173,8 +181,9 @@ export function ReceiptCapture() {
       });
 
       navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
-    } catch {
-      toast.error('Failed to process receipt. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      toast.error(`Failed to process receipt: ${msg}`);
       setCapturedImage(null);
       setMode('select');
     }
