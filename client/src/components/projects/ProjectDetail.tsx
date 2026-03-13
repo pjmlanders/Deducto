@@ -126,44 +126,44 @@ export function ProjectDetail() {
 
       {/* Summary Cards */}
       {project.summary && (
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           <Link to={`/expenses?projectId=${project.id}`} className="block">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Expenses</CardTitle>
-                <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Expenses</CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-500" />
               </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0">
-                <div className="text-lg sm:text-2xl font-bold text-red-600">
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-red-600">
                   {formatCurrency(project.summary.totalExpenses)}
                 </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{project.summary.expenseCount} transactions</p>
+                <p className="text-xs text-muted-foreground">{project.summary.expenseCount} transactions</p>
               </CardContent>
             </Card>
           </Link>
 
           <Link to={`/deposits?projectId=${project.id}`} className="block">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Deposits</CardTitle>
-                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Deposits</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-500" />
               </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0">
-                <div className="text-lg sm:text-2xl font-bold text-green-600">
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {formatCurrency(project.summary.totalDeposits)}
                 </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{project.summary.depositCount} deposits</p>
+                <p className="text-xs text-muted-foreground">{project.summary.depositCount} deposits</p>
               </CardContent>
             </Card>
           </Link>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Net</CardTitle>
-              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+          <Card className="col-span-2 sm:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="p-3 sm:p-6 pt-0">
-              <div className={`text-lg sm:text-2xl font-bold ${project.summary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <CardContent>
+              <div className={`text-xl sm:text-2xl font-bold ${project.summary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(project.summary.netBalance)}
               </div>
             </CardContent>
