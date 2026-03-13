@@ -69,6 +69,18 @@ export function useDeleteReceipt() {
   });
 }
 
+export function useDeleteAllReceipts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: receiptsApi.deleteAll,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      toast.success('All pending receipts deleted');
+    },
+    onError: () => toast.error('Failed to delete receipts'),
+  });
+}
+
 export function useAcceptReceipt() {
   const queryClient = useQueryClient();
   return useMutation({

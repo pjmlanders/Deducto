@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { usePendingReceipts, useDeleteReceipt } from '@/hooks/useReceipts';
+import { usePendingReceipts, useDeleteReceipt, useDeleteAllReceipts } from '@/hooks/useReceipts';
 import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,9 @@ export function ReceiptList() {
   const projectName = projectId ? projects?.data?.find((p) => p.id === projectId)?.name : null;
   const { data: receipts, isLoading } = usePendingReceipts();
   const deleteReceipt = useDeleteReceipt();
+  const deleteAllReceipts = useDeleteAllReceipts();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [acceptReceipt, setAcceptReceipt] = useState<Receipt | null>(null);
 
   return (
@@ -42,9 +44,16 @@ export function ReceiptList() {
             {projectName && <> for <span className="font-medium text-foreground">{projectName}</span></>}
           </p>
         </div>
-        <Button asChild>
-          <Link to={`/scan${pq}`}>Scan Receipt</Link>
-        </Button>
+        <div className="flex gap-2">
+          {receipts && receipts.length > 1 && (
+            <Button variant="outline" size="sm" onClick={() => setShowDeleteAll(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete all
+            </Button>
+          )}
+          <Button asChild>
+            <Link to={`/scan${pq}`}>Scan Receipt</Link>
+          </Button>
+        </div>
       </div>
 
       {receipts && receipts.length > 0 && (
@@ -191,6 +200,15 @@ export function ReceiptList() {
         description="This will permanently delete this receipt. This action cannot be undone."
         onConfirm={() => { deleteReceipt.mutate(deleteId!); setDeleteId(null); }}
         isPending={deleteReceipt.isPending}
+      />
+
+      <ConfirmDialog
+        open={showDeleteAll}
+        onOpenChange={setShowDeleteAll}
+        title="Delete all pending receipts?"
+        description="This will permanently delete all receipts that haven't been saved as expenses. This cannot be undone."
+        onConfirm={() => { deleteAllReceipts.mutate(); setShowDeleteAll(false); }}
+        isPending={deleteAllReceipts.isPending}
       />
     </div>
   );

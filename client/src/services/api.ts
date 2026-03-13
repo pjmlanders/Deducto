@@ -228,6 +228,9 @@ export const receiptsApi = {
 
   delete: (id: string) =>
     api.delete(`/receipts/${id}`).then((r) => r.data),
+
+  deleteAll: () =>
+    api.delete('/receipts').then((r) => r.data),
 };
 
 // ─── Budgets ────────────────────────────────────────────────────

@@ -418,6 +418,14 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(withReceipts ?? expense);
   });
 
+  // Delete all pending (unlinked) receipts for the user
+  fastify.delete('/receipts', async (request) => {
+    await fastify.prisma.receipt.deleteMany({
+      where: { userId: request.userId, expenseId: null },
+    });
+    return { success: true };
+  });
+
   // Delete receipt
   fastify.delete<{ Params: { id: string } }>('/receipts/:id', async (request, reply) => {
     const receipt = await fastify.prisma.receipt.findFirst({
