@@ -18,6 +18,8 @@ export interface ReceiptExtractionResult {
   total: number | null;
   paymentMethod: string | null;
   category: string | null;
+  /** True when AI chose a category NOT in the user's list (needs to be created) */
+  categoryIsNew: boolean;
   confidence: number;
   fieldConfidence: {
     vendor: number;
@@ -90,7 +92,8 @@ export async function processReceipt(
 
   const fileContentBlock = await buildFileContentBlock(fileBuffer, mimeType);
 
-  const categoriesList = userCategories.length > 0
+  const hasUserCategories = userCategories.length > 0;
+  const categoriesList = hasUserCategories
     ? userCategories.join(', ')
     : 'General, Office Supplies, Travel, Meals, Utilities, Maintenance, Professional Services, Insurance, Renovations, Furnishings, Operations';
 
@@ -106,7 +109,13 @@ export async function processReceipt(
             type: 'text',
             text: `You are an expert receipt parser. Extract all information from this receipt.
 
-The user's expense categories are: ${categoriesList}
+The user's existing expense categories are: ${categoriesList}
+
+For the "category" field:
+1. First, look for any category printed on the receipt itself (e.g., department, store type, service type).
+2. If a receipt category matches one of the user's existing categories (case-insensitive), use that exact category name and set "categoryIsNew" to false.
+3. If no good match exists in the user's list, infer the best category from the vendor name, items purchased, and type of business. Set "categoryIsNew" to true and use a clear, concise category name (e.g., "Landscaping", "Electronics", "Cleaning Supplies").
+4. Never leave category null if the vendor or items give any clue about the type of expense.
 
 Extract the following and return ONLY valid JSON (no markdown, no explanation):
 {
@@ -122,7 +131,8 @@ Extract the following and return ONLY valid JSON (no markdown, no explanation):
   "tip": 0.00,
   "total": 0.00,
   "paymentMethod": "visa",
-  "category": "best matching category from user's list above",
+  "category": "category name (from user list or new inference)",
+  "categoryIsNew": false,
   "confidence": 0.95,
   "fieldConfidence": {
     "vendor": 0.95,
@@ -137,7 +147,6 @@ Rules:
 - If a field is unreadable, set it to null and lower confidence
 - Amount should be the TOTAL amount paid
 - Date format must be YYYY-MM-DD
-- Category must be one of the user's categories listed above
 - Confidence should honestly reflect image clarity and extraction certainty
 - For paymentMethod use: visa, mastercard, amex, discover, cash, check, debit, or null`,
           },

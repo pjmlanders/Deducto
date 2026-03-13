@@ -155,6 +155,10 @@ model Receipt {
   extractedCategory String?
   extractedTaxInfo  String?
 
+  // AI-resolved category (matched or created from extractedCategory)
+  suggestedCategoryId String?
+  suggestedCategory   Category? @relation("ReceiptSuggestedCategory", fields: [suggestedCategoryId], references: [id], onDelete: SetNull)
+
   // Duplicate detection
   fingerprint   String?
   isDuplicate   Boolean @default(false)
@@ -217,9 +221,10 @@ model Category {
   sortOrder Int      @default(0)
   isDefault Boolean  @default(false)
 
-  expenses        Expense[]
-  budgets         Budget[]
-  mileageEntries  MileageEntry[]
+  expenses          Expense[]
+  budgets           Budget[]
+  mileageEntries    MileageEntry[]
+  suggestedReceipts Receipt[] @relation("ReceiptSuggestedCategory")
 
   createdAt DateTime @default(now())
 

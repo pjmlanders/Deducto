@@ -54,6 +54,7 @@ function buildExpenseData(receipt: Receipt, projectId: string) {
     date: receipt.extractedDate
       ? formatDateInput(receipt.extractedDate)
       : formatDateInput(new Date()),
+    ...(receipt.suggestedCategoryId ? { categoryId: receipt.suggestedCategoryId } : {}),
   };
 }
 

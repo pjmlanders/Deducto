@@ -58,15 +58,17 @@ export function ReceiptAcceptModal({ receipt, projectId, open, onOpenChange }: P
     });
   }, [open, receipt.id]);
 
-  // Auto-match extracted category
+  // Pre-populate category: prefer the AI-resolved suggestedCategoryId, fall back to name match
   useEffect(() => {
-    if (receipt.extractedCategory && categories) {
+    if (receipt.suggestedCategoryId) {
+      setForm((f) => ({ ...f, categoryId: receipt.suggestedCategoryId! }));
+    } else if (receipt.extractedCategory && categories) {
       const match = categories.find(
         (c) => c.name.toLowerCase() === receipt.extractedCategory!.toLowerCase()
       );
       if (match) setForm((f) => ({ ...f, categoryId: match.id }));
     }
-  }, [receipt.extractedCategory, categories]);
+  }, [receipt.suggestedCategoryId, receipt.extractedCategory, categories]);
 
   const handleAccept = async () => {
     await acceptReceipt.mutateAsync({

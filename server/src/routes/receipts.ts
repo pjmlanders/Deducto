@@ -437,7 +437,7 @@ async function processReceiptAsync(
     // Get user categories for AI context
     const categories = await fastify.prisma.category.findMany({
       where: { userId },
-      select: { name: true },
+      select: { id: true, name: true, color: true },
     });
     const categoryNames = categories.map((c: any) => c.name);
 
@@ -469,14 +469,50 @@ async function processReceiptAsync(
       }
     }
 
-    // Match category name to user's category
+    // Resolve AI category to a category ID, creating a new one if needed
+    let suggestedCategoryId: string | null = null;
     let matchedCategoryName = result.category;
-    if (result.category && categoryNames.length > 0) {
-      const lowerCategory = result.category.toLowerCase();
-      const match = categoryNames.find(
-        (c: string) => c.toLowerCase() === lowerCategory
-      );
-      matchedCategoryName = match || result.category;
+
+    if (result.category) {
+      const aiName = result.category.trim();
+      const lower = aiName.toLowerCase();
+
+      // 1. Exact case-insensitive match
+      let match = categories.find((c: any) => c.name.toLowerCase() === lower);
+
+      // 2. Fuzzy: AI name contains existing category name or vice versa
+      if (!match) {
+        match = categories.find((c: any) => {
+          const cn = c.name.toLowerCase();
+          return lower.includes(cn) || cn.includes(lower);
+        });
+      }
+
+      if (match) {
+        suggestedCategoryId = match.id;
+        matchedCategoryName = match.name;
+      } else {
+        // 3. No match — create a new category for the user
+        const CATEGORY_COLORS = [
+          '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+          '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+        ];
+        // Pick a color deterministically based on name hash
+        let hash = 0;
+        for (let i = 0; i < aiName.length; i++) hash = (hash * 31 + aiName.charCodeAt(i)) >>> 0;
+        const color = CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
+
+        try {
+          const newCategory = await fastify.prisma.category.create({
+            data: { userId, name: aiName, color, isDefault: false },
+          });
+          suggestedCategoryId = newCategory.id;
+          matchedCategoryName = newCategory.name;
+          fastify.log.info({ categoryName: aiName }, 'Auto-created category from AI receipt scan');
+        } catch {
+          // Category with this name may already exist for a different user — skip
+        }
+      }
     }
 
     await fastify.prisma.receipt.update({
@@ -496,6 +532,7 @@ async function processReceiptAsync(
         fingerprint,
         isDuplicate,
         duplicateOfId,
+        suggestedCategoryId,
       },
     });
   } catch (err) {
