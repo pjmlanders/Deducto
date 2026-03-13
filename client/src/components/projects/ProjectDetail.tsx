@@ -81,41 +81,41 @@ export function ProjectDetail() {
       </div>
 
       {/* Entry Type Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Link
           to={`/scan?projectId=${project.id}`}
-          className="group flex flex-col items-center justify-center gap-2 p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"
+          className="group flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
             <Camera className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Scan Receipt</p>
-            <p className="text-xs text-muted-foreground">Upload or photograph</p>
+            <p className="font-semibold text-xs sm:text-sm">Scan Receipt</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Upload or photograph</p>
           </div>
         </Link>
         <Link
           to={`/expenses/new?projectId=${project.id}`}
-          className="group flex flex-col items-center justify-center gap-2 p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"
+          className="group flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
             <Receipt className="h-5 w-5 text-blue-500" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Add Expense</p>
-            <p className="text-xs text-muted-foreground">Manual entry</p>
+            <p className="font-semibold text-xs sm:text-sm">Add Expense</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Manual entry</p>
           </div>
         </Link>
         <Link
           to={`/mileage?projectId=${project.id}`}
-          className="group flex flex-col items-center justify-center gap-2 p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"
+          className="group flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 group-hover:bg-green-500/20 transition-colors">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-green-500/10 group-hover:bg-green-500/20 transition-colors">
             <Car className="h-5 w-5 text-green-500" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Log Mileage</p>
-            <p className="text-xs text-muted-foreground">Track trips</p>
+            <p className="font-semibold text-xs sm:text-sm">Log Mileage</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Track trips</p>
           </div>
         </Link>
       </div>
