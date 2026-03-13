@@ -65,7 +65,9 @@ const ClerkApp = React.lazy(async () => {
     const isSignUp = hash.startsWith('#/sign-up');
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        {isSignUp ? <SignUp routing="hash" /> : <SignIn routing="hash" />}
+        {isSignUp
+          ? <SignUp routing="hash" signInUrl="#/sign-in" />
+          : <SignIn routing="hash" signUpUrl="#/sign-up" />}
       </div>
     );
   }
