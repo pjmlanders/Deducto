@@ -58,6 +58,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         processingStatus: 'pending',
         fileData: buffer as unknown as Uint8Array<ArrayBuffer>,
       },
+      omit: { fileData: true },
     });
 
     return reply.status(201).send(receipt);
@@ -106,6 +107,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         processingStatus: 'pending',
         fileData: buffer as unknown as Uint8Array<ArrayBuffer>,
       },
+      omit: { fileData: true },
     });
 
     return reply.status(201).send(receipt);
@@ -154,6 +156,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
 
     const receipts = await fastify.prisma.receipt.findMany({
       where,
+      omit: { fileData: true },
       include: {
         expense: { select: { id: true } },
       },
@@ -169,6 +172,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { id: string } }>('/receipts/:id', async (request, reply) => {
     const receipt = await fastify.prisma.receipt.findFirst({
       where: { id: request.params.id, userId: request.userId },
+      omit: { fileData: true },
       include: { expense: { select: { id: true, vendor: true, amount: true } } },
     });
 
