@@ -40,7 +40,9 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     const filePath = path.join(userDir, fileName);
 
     // Save file
-    const buffer = await file.toBuffer();
+    const rawBuffer = await file.toBuffer();
+    // Compress images to reduce storage (PDFs passed through unchanged)
+    const { buffer, mimeType: storedMimeType } = await compressImage(rawBuffer, file.mimetype);
     // Best-effort disk write (ephemeral on Railway — DB is the source of truth)
     try { await fs.writeFile(filePath, buffer); } catch { /* ignore */ }
 
@@ -49,7 +51,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         userId: request.userId,
         fileName,
         originalName: file.filename,
-        mimeType: file.mimetype,
+        mimeType: storedMimeType,
         fileSize: buffer.length,
         storagePath: filePath,
         storageType: 'local',
@@ -80,10 +82,12 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'Image too large. Maximum size is 10MB.' });
     }
 
-    const buffer = Buffer.from(base64Data, 'base64');
+    const rawBuffer = Buffer.from(base64Data, 'base64');
+    // Compress captured image before storing
+    const { buffer, mimeType: storedMimeType } = await compressImage(rawBuffer, mimeType);
 
     const userDir = await ensureUploadDir(request.userId);
-    const ext = mimeType === 'image/png' ? '.png' : '.jpg';
+    const ext = storedMimeType === 'image/png' ? '.png' : '.jpg';
     const fileName = `${crypto.randomUUID()}${ext}`;
     const filePath = path.join(userDir, fileName);
 
@@ -95,7 +99,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         userId: request.userId,
         fileName,
         originalName: `capture${ext}`,
-        mimeType,
+        mimeType: storedMimeType,
         fileSize: buffer.length,
         storagePath: filePath,
         storageType: 'local',
@@ -434,6 +438,18 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     return { success: true };
   });
 };
+
+// Compress images before storage — PDFs passed through unchanged
+async function compressImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (mimeType === 'application/pdf') {
+    return { buffer, mimeType };
+  }
+  const compressed = await sharp(buffer)
+    .resize(2000, 2000, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 82 })
+    .toBuffer();
+  return { buffer: compressed, mimeType: 'image/jpeg' };
+}
 
 // Async receipt processing with Claude AI
 async function processReceiptAsync(
