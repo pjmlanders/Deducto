@@ -124,6 +124,15 @@ export function ExpenseDetail() {
                 <p className="text-sm">{expense.purchaser}</p>
               </div>
             )}
+            {expense.category && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Category</p>
+                <p className="text-sm flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: expense.category.color }} />
+                  {expense.category.name}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase">Source</p>
               <p className="text-sm capitalize">{expense.source.replaceAll('_', ' ')}</p>

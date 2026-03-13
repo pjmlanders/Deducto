@@ -351,7 +351,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         project: { select: { id: true, name: true, color: true } },
         category: true,
         receipt: true,
-        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true, mimeType: true } },
       },
     });
 
@@ -396,7 +396,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
       include: {
         project: { select: { id: true, name: true, color: true } },
         category: true,
-        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true, mimeType: true } },
       },
     });
 
@@ -411,7 +411,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         project: { select: { id: true, name: true, color: true } },
         category: true,
         receipt: true,
-        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true } },
+        receipts: { select: { id: true, thumbnailPath: true, processingStatus: true, originalName: true, mimeType: true } },
       },
     });
 
