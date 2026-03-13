@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useDeposits, useCreateDeposit, useDeleteDeposit } from '@/hooks/useDeposits';
 import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,11 +23,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency, formatDate, formatDateInput } from '@/lib/utils';
-import { Plus, PiggyBank, Trash2 } from 'lucide-react';
+import { Plus, PiggyBank, Trash2, ArrowLeft } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export function DepositList() {
-  const { data: deposits, isLoading } = useDeposits();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('projectId') || undefined;
+  const { data: deposits, isLoading } = useDeposits({ projectId });
   const { data: projects } = useProjects();
   const createDeposit = useCreateDeposit();
   const deleteDeposit = useDeleteDeposit();
@@ -59,9 +62,16 @@ export function DepositList() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Deposits</h1>
-          <p className="text-sm text-muted-foreground">Track income and deposits</p>
+        <div className="flex items-center gap-2">
+          {projectId && (
+            <Button asChild variant="ghost" size="icon" className="flex-shrink-0">
+              <Link to={`/projects/${projectId}`}><ArrowLeft className="h-5 w-5" /></Link>
+            </Button>
+          )}
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Deposits</h1>
+            <p className="text-sm text-muted-foreground">Track income and deposits</p>
+          </div>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-2" /> Add Deposit

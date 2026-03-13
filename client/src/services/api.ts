@@ -190,10 +190,21 @@ export const receiptsApi = {
 
   /** Fetch a receipt file with auth and open it in a new tab via a blob URL. */
   openFile: async (id: string) => {
-    const r = await api.get(`/receipts/${id}/file`, { responseType: 'blob' });
-    const url = URL.createObjectURL(r.data);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    try {
+      const r = await api.get(`/receipts/${id}/file`, { responseType: 'blob' });
+      const url = URL.createObjectURL(r.data);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401) {
+        toast.error('Authentication required — please sign in again');
+      } else if (status === 404) {
+        toast.error('Receipt file not found');
+      } else {
+        toast.error('Failed to open receipt file');
+      }
+    }
   },
 
   /** Fetch a receipt file with auth and return a blob URL (caller must revoke). */

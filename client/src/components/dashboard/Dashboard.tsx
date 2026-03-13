@@ -220,8 +220,8 @@ export function Dashboard() {
           {projectList.slice(0, 6).map((project) => (
             <Card
               key={project.id}
-              className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
-              style={{ borderLeftColor: project.color }}
+              className="cursor-pointer hover:shadow-md transition-shadow border-2"
+              style={{ borderColor: project.color }}
               onClick={() => navigate(`/projects/${project.id}`)}
             >
               <CardContent className="p-4">
@@ -405,13 +405,20 @@ export function Dashboard() {
                         const found = dailySpending.find((d: any) => Number(d.month) === i + 1);
                         return { day: name, total: found ? Number(found.total) : 0 };
                       })
-                    : dailySpending.map((d: any) => ({
-                        day: new Date(d.day).getDate(),
-                        total: Number(d.total) || 0,
-                      }))
+                    : (() => {
+                        const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                        return Array.from({ length: daysInMonth }, (_, i) => {
+                          const dayNum = i + 1;
+                          const found = dailySpending.find((d: any) => {
+                            const s = typeof d.day === 'string' ? d.day : new Date(d.day).toISOString().split('T')[0];
+                            return parseInt(s.split('-')[2], 10) === dayNum;
+                          });
+                          return { day: dayNum, total: found ? Number(found.total) : 0 };
+                        });
+                      })()
                   }>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                    <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={0} />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="total" fill="#10b981" radius={[6, 6, 0, 0]} />

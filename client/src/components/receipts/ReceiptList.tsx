@@ -34,11 +34,11 @@ export function ReceiptList() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Receipt Issues</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Pending Receipts</h1>
           <p className="text-sm text-muted-foreground">
             {receipts?.length
-              ? `${receipts.length} receipt${receipts.length !== 1 ? 's' : ''} need${receipts.length === 1 ? 's' : ''} attention`
-              : 'No issues — all receipts have been processed successfully'}
+              ? `${receipts.length} receipt${receipts.length !== 1 ? 's' : ''} waiting for review`
+              : 'No pending receipts'}
             {projectName && <> for <span className="font-medium text-foreground">{projectName}</span></>}
           </p>
         </div>
@@ -46,6 +46,17 @@ export function ReceiptList() {
           <Link to={`/scan${pq}`}>Scan Receipt</Link>
         </Button>
       </div>
+
+      {receipts && receipts.length > 0 && (
+        <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">What do the statuses mean?</p>
+          <p><span className="text-blue-600 font-medium">Queued / Processing</span> — the AI is scanning the receipt. Wait a moment.</p>
+          <p><span className="text-green-600 font-medium">Ready</span> — AI extracted the data. Click <strong>+ Expense</strong> to review and save it.</p>
+          <p><span className="text-amber-600 font-medium">Needs attention</span> — AI couldn't read the vendor or amount. Click <strong>+ Expense</strong> to fill it in manually.</p>
+          <p><span className="text-red-600 font-medium">Failed</span> — processing error. Click <strong>+ Expense</strong> to enter details manually, or delete and re-upload.</p>
+          <p><span className="font-medium">Duplicate</span> — same receipt uploaded before. Delete if not needed.</p>
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">

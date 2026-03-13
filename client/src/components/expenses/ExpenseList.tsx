@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useExpenses, useDeleteExpense, useBulkDeleteExpenses, useBulkCategorize } from '@/hooks/useExpenses';
 import { useProjects } from '@/hooks/useProjects';
 import { useCategories } from '@/hooks/useCategories';
+import { useMileage } from '@/hooks/useMileage';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { useTags } from '@/hooks/useTags';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Plus, Search, Receipt, Trash2, ChevronLeft, ChevronRight, Filter, CheckSquare, Square, X, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Receipt, Trash2, ChevronLeft, ChevronRight, Filter, CheckSquare, Square, X, AlertTriangle, ArrowLeft, Car } from 'lucide-react';
 import { REIMBURSEMENT_STATUSES } from '@/lib/constants';
 import type { ExpenseFilters } from '@/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -89,15 +90,42 @@ export function ExpenseList() {
   const { data: expenses, isLoading } = useExpenses(activeFilters);
   const expenseList = Array.isArray(expenses?.data) ? expenses.data : [];
 
+  const currentYear = new Date().getFullYear();
+  const filterYear = filters.dateFrom ? parseInt(filters.dateFrom.split('-')[0]) : currentYear;
+  const { data: mileageData } = useMileage(filterYear);
+  const mileageList = Array.isArray(mileageData?.data) ? mileageData.data : [];
+
+  // Filter and resolve display date for mileage entries
+  const filteredMileage = mileageList.filter((entry) => {
+    if (filters.projectId && entry.projectId !== filters.projectId) return false;
+    const displayDate = entry.roundTrip && entry.returnDate ? entry.returnDate : entry.date;
+    if (filters.dateFrom && displayDate < filters.dateFrom) return false;
+    if (filters.dateTo && displayDate > filters.dateTo) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!entry.purpose?.toLowerCase().includes(q) &&
+          !entry.startLocation?.toLowerCase().includes(q) &&
+          !entry.endLocation?.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Expenses</h1>
-          <p className="text-sm text-muted-foreground">
-            {expenses?.pagination?.total || 0} total expenses
-          </p>
+        <div className="flex items-center gap-2 min-w-0">
+          {filters.projectId && (
+            <Button asChild variant="ghost" size="icon" className="flex-shrink-0">
+              <Link to={`/projects/${filters.projectId}`}><ArrowLeft className="h-5 w-5" /></Link>
+            </Button>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Expenses</h1>
+            <p className="text-sm text-muted-foreground">
+              {expenses?.pagination?.total || 0} total expenses
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
@@ -397,6 +425,47 @@ export function ExpenseList() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Mileage Entries */}
+      {filteredMileage.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-medium text-muted-foreground px-1">Mileage Trips</h2>
+          {filteredMileage.map((entry) => {
+            const displayDate = entry.roundTrip && entry.returnDate ? entry.returnDate : entry.date;
+            return (
+              <Link key={entry.id} to={`/mileage${entry.projectId ? `?projectId=${entry.projectId}` : ''}`}>
+                <Card className="hover:shadow-sm transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Car className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{entry.purpose || `${entry.startLocation} → ${entry.endLocation}`}</p>
+                          <p className="text-xs text-muted-foreground truncate">{entry.startLocation} → {entry.endLocation}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">{new Date(displayDate + 'T12:00:00').toLocaleDateString()}</span>
+                            {entry.project && (
+                              <>
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.project.color }} />
+                                <span className="text-xs text-muted-foreground">{entry.project.name}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-semibold text-sm">{Number(entry.distance).toFixed(1)} mi</p>
+                        <p className="text-xs text-muted-foreground">${Number(entry.deduction).toFixed(2)} deduction</p>
+                        {entry.roundTrip && <Badge variant="outline" className="text-xs mt-1">Round trip</Badge>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       )}
 
       {/* Pagination */}

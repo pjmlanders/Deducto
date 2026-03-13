@@ -413,22 +413,6 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { date: 'asc' },
     });
 
-    const disclaimerRow: Record<string, string> = {
-      Date: '',
-      Vendor: '',
-      Description: EXPORT_DISCLAIMER,
-      Amount: '',
-      Project: '',
-      Category: '',
-      'Payment Method': '',
-      Purchaser: '',
-      Reimbursable: '',
-      'Reimbursement Status': '',
-      'Tax Deductible': '',
-      'Tax Category': '',
-      'Tax Schedule': '',
-      Notes: '',
-    };
     const dataRows: Record<string, string>[] = expenses.map((e): Record<string, string> => ({
       Date: e.date.toISOString().split('T')[0],
       Vendor: e.vendor,
@@ -445,8 +429,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       'Tax Schedule': e.taxCategory?.schedule ?? '',
       Notes: e.notes ?? '',
     }));
-    const rows: Record<string, string>[] = [disclaimerRow, ...dataRows];
-    const csv = stringify(rows, { header: true });
+    const csv = stringify(dataRows, { header: true });
 
     const filename = month
       ? `expenses-${year}-${String(month).padStart(2, '0')}.csv`
@@ -575,12 +558,19 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       ? `expense-report-${year}-${String(month).padStart(2, '0')}.pdf`
       : `expense-report-${year}.pdf`;
 
+    const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+      doc.end();
+    });
+
     reply
       .header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `attachment; filename="${filename}"`);
-
-    doc.pipe(reply.raw);
-    doc.end();
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .header('Content-Length', String(pdfBuffer.length));
+    return reply.send(pdfBuffer);
   });
 };
 

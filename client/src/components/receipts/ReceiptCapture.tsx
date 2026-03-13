@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Camera, Upload, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Camera, Upload, Loader2, CheckCircle2, ArrowLeft, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { receiptsApi } from '@/services/api';
 import { formatDateInput } from '@/lib/utils';
@@ -228,8 +228,18 @@ export function ReceiptCapture() {
     }
 
     const successCount = results.filter((r) => r.status === 'done').length;
-    toast.success(`Created ${successCount} expense${successCount !== 1 ? 's' : ''} from receipts`);
-    navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
+    const failCount = results.filter((r) => r.status === 'error').length;
+
+    if (failCount > 0) {
+      if (successCount > 0) {
+        toast.success(`Created ${successCount} expense${successCount !== 1 ? 's' : ''}`);
+      }
+      toast.error(`${failCount} receipt${failCount !== 1 ? 's' : ''} failed — see list below`);
+      setMode('batch'); // Stay on batch view so user can see failures
+    } else {
+      toast.success(`Created ${successCount} expense${successCount !== 1 ? 's' : ''} from receipts`);
+      navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
@@ -348,31 +358,38 @@ export function ReceiptCapture() {
 
       {/* Batch progress */}
       {mode === 'batch' && (
-        <Card>
-          <CardContent className="py-4 space-y-3">
-            {batchResults.map((r, i) => (
-              <div key={i} className="flex items-center gap-3">
-                {r.status === 'done' ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                ) : r.status === 'error' ? (
-                  <span className="h-5 w-5 text-red-500 shrink-0 text-center font-bold leading-5">!</span>
-                ) : (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{r.fileName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {r.status === 'uploading' && 'Uploading...'}
-                    {r.status === 'analyzing' && 'Analyzing with AI...'}
-                    {r.status === 'creating' && 'Creating expense...'}
-                    {r.status === 'done' && 'Expense created'}
-                    {r.status === 'error' && (r.error || 'Failed')}
-                  </p>
+        <div className="space-y-3">
+          <Card>
+            <CardContent className="py-4 space-y-3">
+              {batchResults.map((r, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  {r.status === 'done' ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                  ) : r.status === 'error' ? (
+                    <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                  ) : (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{r.fileName}</p>
+                    <p className={`text-xs ${r.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      {r.status === 'uploading' && 'Uploading...'}
+                      {r.status === 'analyzing' && 'Analyzing with AI...'}
+                      {r.status === 'creating' && 'Creating expense...'}
+                      {r.status === 'done' && 'Expense created ✓'}
+                      {r.status === 'error' && (r.error || 'Failed — delete the file and try again')}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+          {batchResults.every((r) => r.status === 'done' || r.status === 'error') && (
+            <Button className="w-full" onClick={() => navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses')}>
+              Continue
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Camera */}
