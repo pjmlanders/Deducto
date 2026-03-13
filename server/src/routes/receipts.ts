@@ -196,7 +196,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     // Prefer DB-stored bytes; fall back to disk for legacy receipts
     if (receipt.fileData) {
       reply.type(receipt.mimeType);
-      return reply.send(receipt.fileData);
+      return reply.send(Buffer.from(receipt.fileData as Uint8Array));
     }
 
     try {
@@ -223,7 +223,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
       // Prefer DB-stored bytes; fall back to disk for legacy receipts
       let fileBuffer: Buffer;
       if (receipt.fileData) {
-        fileBuffer = receipt.fileData as Buffer;
+        fileBuffer = Buffer.from(receipt.fileData as Uint8Array);
       } else {
         fileBuffer = await fs.readFile(receipt.storagePath);
       }
@@ -479,7 +479,7 @@ async function processReceiptAsync(
     // Prefer DB-stored bytes; fall back to disk for legacy receipts
     let fileBuffer: Buffer;
     if (receipt.fileData) {
-      fileBuffer = receipt.fileData as Buffer;
+      fileBuffer = Buffer.from(receipt.fileData as Uint8Array);
     } else {
       fileBuffer = await (await import('fs/promises')).readFile(receipt.storagePath);
     }
