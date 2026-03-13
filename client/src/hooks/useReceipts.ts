@@ -27,15 +27,16 @@ export function usePendingReceipts() {
 
 export function useUploadReceipt() {
   return useMutation({
-    mutationFn: (file: File) => receiptsApi.upload(file),
+    mutationFn: ({ file, projectId }: { file: File; projectId?: string }) =>
+      receiptsApi.upload(file, projectId),
     onError: () => toast.error('Failed to upload receipt'),
   });
 }
 
 export function useCaptureReceipt() {
   return useMutation({
-    mutationFn: ({ image, mimeType }: { image: string; mimeType?: string }) =>
-      receiptsApi.capture(image, mimeType),
+    mutationFn: ({ image, mimeType, projectId }: { image: string; mimeType?: string; projectId?: string }) =>
+      receiptsApi.capture(image, mimeType, projectId),
     onError: () => toast.error('Failed to capture receipt'),
   });
 }

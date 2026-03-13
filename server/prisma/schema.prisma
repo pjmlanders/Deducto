@@ -59,6 +59,7 @@ model Project {
   deposits       Deposit[]
   budgets        Budget[]
   mileageEntries MileageEntry[]
+  receiptScans   Receipt[]      @relation("ReceiptProject")
 
   @@index([userId])
   @@index([userId, isActive])
@@ -141,6 +142,7 @@ model Receipt {
   storagePath  String
   storageType  String @default("local")
   thumbnailPath String?
+  fileData     Bytes?  // File content stored in DB for persistence across deploys
 
   // AI Processing
   processingStatus String  @default("pending") // pending, processing, completed, failed
@@ -163,6 +165,10 @@ model Receipt {
   fingerprint   String?
   isDuplicate   Boolean @default(false)
   duplicateOfId String?
+
+  // Project association (set at upload time for auto-expense creation)
+  projectId String?
+  project   Project? @relation("ReceiptProject", fields: [projectId], references: [id], onDelete: SetNull)
 
   // Link to expense (when accepted as part of an expense)
   expenseId String?

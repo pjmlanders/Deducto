@@ -132,13 +132,19 @@ export function ReceiptCapture() {
     setMode('working');
     try {
       setWorkingStep('Uploading receipt...');
-      const receipt = await uploadReceipt.mutateAsync(file);
+      const receipt = await uploadReceipt.mutateAsync({ file, projectId: selectedProjectId });
 
       setWorkingStep('Starting AI analysis...');
       await processReceipt.mutateAsync(receipt.id);
 
       setWorkingStep('Analyzing receipt with AI...');
       const processed = await pollReceiptStatus(receipt.id);
+
+      // If auto-created server-side, just navigate
+      if (processed.expenseId) {
+        navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
+        return;
+      }
 
       setWorkingStep('Creating expense...');
       const expenseData = buildExpenseData(processed, selectedProjectId);
@@ -166,13 +172,19 @@ export function ReceiptCapture() {
     setMode('working');
     try {
       setWorkingStep('Uploading photo...');
-      const receipt = await captureReceipt.mutateAsync({ image: capturedImage });
+      const receipt = await captureReceipt.mutateAsync({ image: capturedImage, projectId: selectedProjectId });
 
       setWorkingStep('Starting AI analysis...');
       await processReceipt.mutateAsync(receipt.id);
 
       setWorkingStep('Analyzing receipt with AI...');
       const processed = await pollReceiptStatus(receipt.id);
+
+      // If auto-created server-side, just navigate
+      if (processed.expenseId) {
+        navigate(urlProjectId ? `/projects/${urlProjectId}` : '/expenses');
+        return;
+      }
 
       setWorkingStep('Creating expense...');
       await acceptReceipt.mutateAsync({
@@ -214,7 +226,7 @@ export function ReceiptCapture() {
       try {
         results[i].status = 'uploading';
         setBatchResults([...results]);
-        const receipt = await uploadReceipt.mutateAsync(validFiles[i]);
+        const receipt = await uploadReceipt.mutateAsync({ file: validFiles[i], projectId: selectedProjectId });
 
         results[i].status = 'analyzing';
         setBatchResults([...results]);
@@ -223,10 +235,14 @@ export function ReceiptCapture() {
 
         results[i].status = 'creating';
         setBatchResults([...results]);
-        await acceptReceipt.mutateAsync({
-          receiptId: processed.id,
-          ...buildExpenseData(processed, selectedProjectId),
-        });
+
+        // If auto-created server-side, skip manual accept
+        if (!processed.expenseId) {
+          await acceptReceipt.mutateAsync({
+            receiptId: processed.id,
+            ...buildExpenseData(processed, selectedProjectId),
+          });
+        }
 
         results[i].status = 'done';
         setBatchResults([...results]);

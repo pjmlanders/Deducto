@@ -117,6 +117,7 @@ export interface Receipt {
   isDuplicate: boolean;
   duplicateOfId: string | null;
   suggestedCategoryId: string | null;
+  expenseId: string | null;
   createdAt: string;
   expense?: { id: string; vendor: string; amount: number } | null;
 }

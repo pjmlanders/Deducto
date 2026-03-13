@@ -170,16 +170,17 @@ export const receiptsApi = {
   issuesCount: () =>
     api.get<{ count: number }>('/receipts/issues-count').then((r) => r.data.count),
 
-  upload: (file: File) => {
+  upload: (file: File, projectId?: string) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post<Receipt>('/receipts/upload', formData, {
+    const url = projectId ? `/receipts/upload?projectId=${encodeURIComponent(projectId)}` : '/receipts/upload';
+    return api.post<Receipt>(url, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data);
   },
 
-  capture: (imageBase64: string, mimeType = 'image/jpeg') =>
-    api.post<Receipt>('/receipts/capture', { image: imageBase64, mimeType }).then((r) => r.data),
+  capture: (imageBase64: string, mimeType = 'image/jpeg', projectId?: string) =>
+    api.post<Receipt>('/receipts/capture', { image: imageBase64, mimeType, projectId }).then((r) => r.data),
 
   get: (id: string) =>
     api.get<Receipt>(`/receipts/${id}`).then((r) => r.data),

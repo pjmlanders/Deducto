@@ -21,6 +21,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Upload receipt (multipart file)
   fastify.post('/receipts/upload', async (request, reply) => {
+    const { projectId } = request.query as { projectId?: string };
     const file = await request.file();
 
     if (!file) {
@@ -57,6 +58,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         storageType: 'local',
         processingStatus: 'pending',
         fileData: buffer as unknown as Uint8Array<ArrayBuffer>,
+        projectId: projectId || null,
       },
       omit: { fileData: true },
     });
@@ -66,9 +68,9 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Upload from camera capture (base64)
   fastify.post<{
-    Body: { image: string; mimeType?: string };
+    Body: { image: string; mimeType?: string; projectId?: string };
   }>('/receipts/capture', async (request, reply) => {
-    const { image, mimeType = 'image/jpeg' } = request.body;
+    const { image, mimeType = 'image/jpeg', projectId } = request.body;
 
     if (!image) {
       return reply.status(400).send({ error: 'No image data provided' });
@@ -106,6 +108,7 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         storageType: 'local',
         processingStatus: 'pending',
         fileData: buffer as unknown as Uint8Array<ArrayBuffer>,
+        projectId: projectId || null,
       },
       omit: { fileData: true },
     });
@@ -290,6 +293,8 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
         extractedTaxInfo: true,
         isDuplicate: true,
         duplicateOfId: true,
+        expenseId: true,
+        suggestedCategoryId: true,
       },
     });
 
@@ -585,6 +590,38 @@ async function processReceiptAsync(
         suggestedCategoryId,
       },
     });
+
+    // Auto-create expense if we have projectId and all required fields
+    if (
+      receipt.projectId &&
+      result.vendor &&
+      result.amount != null && Number(result.amount) > 0 &&
+      result.date
+    ) {
+      try {
+        const autoExpense = await fastify.prisma.expense.create({
+          data: {
+            userId,
+            projectId: receipt.projectId,
+            vendor: result.vendor,
+            description: result.vendor,
+            amount: Number(result.amount),
+            date: new Date(result.date),
+            categoryId: suggestedCategoryId || null,
+            confidence: result.confidence,
+            source: 'receipt_scan',
+            receiptId: receiptId,
+          },
+        });
+        await fastify.prisma.receipt.update({
+          where: { id: receiptId },
+          data: { expenseId: autoExpense.id },
+        });
+        fastify.log.info({ receiptId, expenseId: autoExpense.id }, 'Auto-created expense from receipt');
+      } catch (autoErr) {
+        fastify.log.warn(autoErr, 'Auto-create expense failed — receipt left for manual review');
+      }
+    }
   } catch (err) {
     fastify.log.error(err, 'Receipt processing error');
     await fastify.prisma.receipt.update({
