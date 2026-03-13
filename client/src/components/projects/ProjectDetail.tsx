@@ -81,7 +81,7 @@ export function ProjectDetail() {
       </div>
 
       {/* Entry Type Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Link
           to={`/scan?projectId=${project.id}`}
           className="group flex flex-col items-center justify-center gap-2 p-5 rounded-xl border bg-card hover:bg-accent transition-colors text-center"

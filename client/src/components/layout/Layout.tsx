@@ -20,7 +20,7 @@ export function Layout() {
         </div>
       </main>
       <MobileNav />
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster position="bottom-right" richColors closeButton duration={5000} />
     </div>
   );
 }

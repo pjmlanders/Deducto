@@ -31,6 +31,7 @@ export async function buildApp() {
         ? { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' } }
         : undefined,
     },
+    bodyLimit: 25 * 1024 * 1024, // 25MB — camera capture sends base64 JSON (~33% larger than binary)
   });
 
   // Security headers (web app best practices)
@@ -65,10 +66,10 @@ export async function buildApp() {
     allowList: process.env.NODE_ENV === 'test' ? ['127.0.0.1'] : undefined,
   });
 
-  // Multipart file uploads (10MB max)
+  // Multipart file uploads (20MB max — camera photos can exceed 10MB)
   await app.register(multipart, {
     limits: {
-      fileSize: 10 * 1024 * 1024,
+      fileSize: 20 * 1024 * 1024,
     },
   });
 

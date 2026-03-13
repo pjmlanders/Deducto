@@ -455,7 +455,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       ? new Date(year, month, 0, 23, 59, 59)
       : new Date(year, 11, 31, 23, 59, 59);
 
-    const [expenses, expenseTotal, depositTotal] = await Promise.all([
+    const [expenses, expenseTotal, depositTotal, deposits, mileageEntries, mileageTotal] = await Promise.all([
       fastify.prisma.expense.findMany({
         where: {
           userId: request.userId,
@@ -486,6 +486,37 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
         _sum: { amount: true },
         _count: true,
       }),
+      fastify.prisma.deposit.findMany({
+        where: {
+          userId: request.userId,
+          date: { gte: startDate, lte: endDate },
+          ...(projectId && { projectId }),
+        },
+        include: {
+          project: { select: { name: true } },
+        },
+        orderBy: { date: 'asc' },
+      }),
+      fastify.prisma.mileageEntry.findMany({
+        where: {
+          userId: request.userId,
+          date: { gte: startDate, lte: endDate },
+          ...(projectId ? { projectId } : {}),
+        },
+        include: {
+          project: { select: { name: true } },
+        },
+        orderBy: { date: 'asc' },
+      }),
+      fastify.prisma.mileageEntry.aggregate({
+        where: {
+          userId: request.userId,
+          date: { gte: startDate, lte: endDate },
+          ...(projectId ? { projectId } : {}),
+        },
+        _sum: { distance: true, deduction: true },
+        _count: true,
+      }),
     ]);
 
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -495,7 +526,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       : `Year ${year}`;
 
     // Header
-    doc.fontSize(20).text('Expense Report', { align: 'center' });
+    doc.fontSize(20).text('Financial Report', { align: 'center' });
     doc.fontSize(12).text(periodLabel, { align: 'center' });
     doc.fontSize(8).text(EXPORT_DISCLAIMER, { align: 'center' });
     doc.moveDown(1.5);
@@ -503,6 +534,8 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     // Summary
     const totalExpenses = Number(expenseTotal._sum.amount || 0);
     const totalDeposits = Number(depositTotal._sum.amount || 0);
+    const totalMileageDeduction = Number(mileageTotal._sum.deduction || 0);
+    const totalMileageDistance = Number(mileageTotal._sum.distance || 0);
     const net = totalDeposits - totalExpenses;
 
     doc.fontSize(14).text('Summary');
@@ -510,6 +543,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     doc.fontSize(10)
       .text(`Total Expenses: $${totalExpenses.toFixed(2)} (${expenseTotal._count} transactions)`)
       .text(`Total Deposits: $${totalDeposits.toFixed(2)} (${depositTotal._count} deposits)`)
+      .text(`Total Mileage Deduction: $${totalMileageDeduction.toFixed(2)} (${mileageTotal._count} trips, ${totalMileageDistance.toFixed(1)} miles)`)
       .text(`Net: $${net.toFixed(2)}`);
     doc.moveDown(1);
 
@@ -554,9 +588,97 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     doc.font('Helvetica-Bold');
     doc.text(`Total: $${totalExpenses.toFixed(2)}`, col.amount, doc.y);
 
+    // Deposits table
+    doc.moveDown(2);
+    if (doc.y > 750) {
+      doc.addPage();
+      doc.y = 50;
+    }
+    doc.fontSize(14).font('Helvetica-Bold').text('Deposits');
+    doc.moveDown(0.5);
+
+    const depCol = { date: 50, source: 140, desc: 280, amount: 480 };
+    doc.fontSize(8).font('Helvetica-Bold');
+    const depHeaderY = doc.y;
+    doc.text('Date', depCol.date, depHeaderY);
+    doc.text('Source', depCol.source, depHeaderY);
+    doc.text('Description', depCol.desc, depHeaderY);
+    doc.text('Amount', depCol.amount, depHeaderY);
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.3);
+
+    doc.font('Helvetica').fontSize(8);
+
+    for (const deposit of deposits) {
+      if (doc.y > 750) {
+        doc.addPage();
+        doc.y = 50;
+      }
+
+      const rowY = doc.y;
+      doc.text(deposit.date.toISOString().split('T')[0], depCol.date, rowY);
+      doc.text((deposit.source || '').substring(0, 20), depCol.source, rowY);
+      doc.text((deposit.description || '').substring(0, 30), depCol.desc, rowY);
+      doc.text(`$${Number(deposit.amount).toFixed(2)}`, depCol.amount, rowY);
+      doc.moveDown(0.2);
+    }
+
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold');
+    doc.text(`Total: $${totalDeposits.toFixed(2)}`, depCol.amount, doc.y);
+
+    // Mileage table
+    doc.moveDown(2);
+    if (doc.y > 750) {
+      doc.addPage();
+      doc.y = 50;
+    }
+    doc.fontSize(14).font('Helvetica-Bold').text('Mileage');
+    doc.moveDown(0.5);
+
+    const milCol = { date: 50, start: 130, end: 260, distance: 400, deduction: 480 };
+    doc.fontSize(8).font('Helvetica-Bold');
+    const milHeaderY = doc.y;
+    doc.text('Date', milCol.date, milHeaderY);
+    doc.text('Start', milCol.start, milHeaderY);
+    doc.text('End', milCol.end, milHeaderY);
+    doc.text('Distance (mi)', milCol.distance, milHeaderY);
+    doc.text('Deduction', milCol.deduction, milHeaderY);
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.3);
+
+    doc.font('Helvetica').fontSize(8);
+
+    for (const entry of mileageEntries) {
+      if (doc.y > 750) {
+        doc.addPage();
+        doc.y = 50;
+      }
+
+      const rowY = doc.y;
+      doc.text(entry.date.toISOString().split('T')[0], milCol.date, rowY);
+      doc.text(entry.startLocation.substring(0, 20), milCol.start, rowY);
+      doc.text(entry.endLocation.substring(0, 20), milCol.end, rowY);
+      doc.text(Number(entry.distance).toFixed(1), milCol.distance, rowY);
+      doc.text(`$${Number(entry.deduction).toFixed(2)}`, milCol.deduction, rowY);
+      doc.moveDown(0.2);
+    }
+
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold');
+    const milTotalY = doc.y;
+    doc.text(`${totalMileageDistance.toFixed(1)} mi`, milCol.distance, milTotalY);
+    doc.text(`$${totalMileageDeduction.toFixed(2)}`, milCol.deduction, milTotalY);
+
     const filename = month
-      ? `expense-report-${year}-${String(month).padStart(2, '0')}.pdf`
-      : `expense-report-${year}.pdf`;
+      ? `financial-report-${year}-${String(month).padStart(2, '0')}.pdf`
+      : `financial-report-${year}.pdf`;
 
     const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
       const chunks: Buffer[] = [];

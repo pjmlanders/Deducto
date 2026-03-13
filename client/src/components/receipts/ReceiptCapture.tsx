@@ -118,7 +118,7 @@ export function ReceiptCapture() {
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0);
-      setCapturedImage(canvas.toDataURL('image/jpeg', 0.85));
+      setCapturedImage(canvas.toDataURL('image/jpeg', 0.75));
       setMode('preview');
       stopCamera();
     }

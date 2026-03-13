@@ -80,9 +80,9 @@ const receiptRoutes: FastifyPluginAsync = async (fastify) => {
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
 
     // Validate size before decoding (base64 is ~33% larger than binary)
-    const maxBase64Length = Math.ceil(10 * 1024 * 1024 * 4 / 3); // 10MB in base64
+    const maxBase64Length = Math.ceil(20 * 1024 * 1024 * 4 / 3); // 20MB in base64
     if (base64Data.length > maxBase64Length) {
-      return reply.status(400).send({ error: 'Image too large. Maximum size is 10MB.' });
+      return reply.status(400).send({ error: 'Image too large. Maximum size is 20MB.' });
     }
 
     const rawBuffer = Buffer.from(base64Data, 'base64');

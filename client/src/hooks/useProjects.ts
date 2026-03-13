@@ -48,6 +48,8 @@ export function useDeleteProject() {
     mutationFn: projectsApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast.success('Project deleted');
     },
     onError: () => toast.error('Failed to delete project'),
